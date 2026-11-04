@@ -7,6 +7,11 @@
   --surface: #ffffff;
   --border: #e7e5e4;
   --accent: #c2410c;
+  /* Reading kinds: blue = on'yomi, green = kun'yomi (used app-wide). */
+  --on: #1d4ed8;
+  --on-soft: #eff6ff;
+  --kun: #15803d;
+  --kun-soft: #f0fdf4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,6 +22,10 @@
     --surface: #1f1f1f;
     --border: #2e2e2e;
     --accent: #fb923c;
+    --on: #7cb0ff;
+    --on-soft: #16202f;
+    --kun: #5fd98a;
+    --kun-soft: #14241a;
   }
 }
 
@@ -27,6 +36,10 @@
   --color-surface: var(--surface);
   --color-border: var(--border);
   --color-accent: var(--accent);
+  --color-on: var(--on);
+  --color-on-soft: var(--on-soft);
+  --color-kun: var(--kun);
+  --color-kun-soft: var(--kun-soft);
   --font-sans: var(--font-noto-sans-jp), system-ui, sans-serif;
   --font-hand: var(--font-klee-one), var(--font-noto-sans-jp), serif;
 }
@@ -48,4 +61,14 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   overscroll-behavior: none;
+}
+
+/* StrokeGuide: every stroke uses pathLength=100, so one keyframe animates them all. */
+@keyframes stroke-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }

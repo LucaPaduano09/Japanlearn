@@ -1,5 +1,10 @@
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { Suspense } from "react";
+import { KanjiDetail } from "@/components/kanji/KanjiDetail";
 
 export default function KanjiPage() {
-  return <PlaceholderPage title="Kanji" />;
+  return (
+    <Suspense fallback={null}>
+      <KanjiDetail />
+    </Suspense>
+  );
 }

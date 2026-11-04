@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { WritePractice } from "@/components/writing/WritePractice";
 
 export default function WritePage() {
-  return <PlaceholderPage title="Write" />;
+  return <WritePractice />;
 }

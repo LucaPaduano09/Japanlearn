@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { LessonList } from "@/components/learn/LessonList";
 
 export default function LearnPage() {
-  return <PlaceholderPage title="Learn" />;
+  return <LessonList />;
 }

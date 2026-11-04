@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true, // /study/ → /study/index.html inside the WebView
   images: { unoptimized: true },
+  // `npm run dev -- -H 0.0.0.0`: let phones/tablets on the local network load
+  // dev assets (only affects `next dev`).
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "*.local"],
   turbopack: {
     rules: {
       "*.css": {

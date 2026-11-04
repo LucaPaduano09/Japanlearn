@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kakitai</string>
+    <string name="title_activity_main">Kakitai</string>
+    <string name="package_name">com.lucapaduano.kakitai</string>
+    <string name="custom_url_scheme">com.lucapaduano.kakitai</string>
+</resources>

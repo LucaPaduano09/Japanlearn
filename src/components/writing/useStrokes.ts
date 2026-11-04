@@ -5,10 +5,10 @@ import { loadStrokes } from "@/lib/content/loader";
 import type { RefStroke } from "@/lib/strokes/types";
 
 /**
- * Reference strokes for each character, in order; null while loading or if
- * any character has no stroke data.
+ * Reference strokes for each character, in order: undefined while loading,
+ * null if any character has no stroke data.
  */
-export function useStrokes(chars: string[]): RefStroke[][] | null {
+export function useStrokes(chars: string[]): RefStroke[][] | null | undefined {
   const key = chars.join("");
   const [loaded, setLoaded] = useState<{
     key: string;
@@ -29,5 +29,5 @@ export function useStrokes(chars: string[]): RefStroke[][] | null {
     };
   }, [key]);
 
-  return loaded?.key === key ? loaded.strokes : null;
+  return loaded?.key === key ? loaded.strokes : undefined;
 }

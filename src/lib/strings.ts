@@ -100,6 +100,12 @@ export const strings = {
       `last: ${points} pts · ${ms} ms${pressure ? " · pressure" : ""}`,
     undo: "Undo",
     clear: "Clear",
+    mode: "Practice mode",
+    modes: { trace: "Trace", recall: "From memory" },
+    details: "Details",
+    pickLabel: "Character to practice",
+    pickPlaceholder: "Practice a character, e.g. 書",
+    practice: "Practice",
   },
   kanji: {
     title: "Kanji",
@@ -111,6 +117,7 @@ export const strings = {
     kunYomi: "Kun'yomi",
     meanings: "Meanings",
     romaji: "Romaji",
+    practice: "Practice writing",
   },
   learn: {
     title: "Learn",

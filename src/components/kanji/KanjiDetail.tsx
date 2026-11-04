@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { StrokeGuide } from "@/components/writing/StrokeGuide";
@@ -79,6 +80,15 @@ export function KanjiDetail() {
           <dt className="text-muted">{strings.kanji.meanings}</dt>
           <dd>{kanji.meanings.join(", ")}</dd>
         </dl>
+      )}
+
+      {strokes && (
+        <Link
+          href={`/write/?c=${encodeURIComponent(char)}`}
+          className="rounded-2xl bg-accent py-3 text-center font-semibold text-white active:opacity-80"
+        >
+          {strings.kanji.practice}
+        </Link>
       )}
 
       {!kanji && kana && (

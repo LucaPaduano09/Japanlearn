@@ -40,3 +40,24 @@ test("drawing on the canvas records strokes; undo and clear remove them", async 
   await page.getByRole("button", { name: "Clear" }).click();
   await expect(page.getByText("0 strokes")).toBeVisible();
 });
+
+test("practicing one character: trace, then write it from memory", async ({ page }) => {
+  await page.goto("/kanji/?c=%E4%B8%80"); // 一
+  await page.getByRole("link", { name: "Practice writing" }).click();
+  await expect(page.getByRole("radio", { name: "Trace" })).toHaveAttribute("aria-checked", "true");
+
+  const canvas = page.locator("canvas");
+  await expect.poll(async () => (await canvas.boundingBox())?.width ?? 0).toBeGreaterThan(100);
+  const box = (await canvas.boundingBox())!;
+  // 一 is one stroke, left to right across the middle.
+  const draw = async () => {
+    await page.mouse.move(box.x + box.width * 0.1, box.y + box.height * 0.53);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.5, { steps: 16 });
+    await page.mouse.up();
+  };
+  await draw();
+  await expect(page.getByRole("radio", { name: "From memory" })).toHaveAttribute("aria-checked", "true");
+  await draw();
+  await expect(page.getByRole("button", { name: "Write it again" })).toBeVisible();
+});

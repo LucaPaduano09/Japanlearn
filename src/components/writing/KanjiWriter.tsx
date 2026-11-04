@@ -21,6 +21,7 @@ import {
 } from "@/lib/strokes/session";
 import type { RefStroke, Stroke } from "@/lib/strokes/types";
 import { strings } from "@/lib/strings";
+import { useSettings } from "@/store/settings";
 
 /** How long a rejected stroke's correct path stays on screen. */
 const FLASH_MS = 1100;
@@ -33,6 +34,7 @@ interface KanjiWriterProps {
   refs: RefStroke[];
   /** trace: faint model + next stroke highlighted. recall: blank box, hints on request. */
   mode: "trace" | "recall";
+  /** Defaults to the Settings value. */
   strictness?: Strictness;
   onComplete: (tally: CharacterTally) => void;
 }
@@ -41,9 +43,12 @@ interface KanjiWriterProps {
 export function KanjiWriter({
   refs,
   mode,
-  strictness = "normal",
+  strictness: strictnessProp,
   onComplete,
 }: KanjiWriterProps) {
+  const savedStrictness = useSettings((s) => s.strictness);
+  const handedness = useSettings((s) => s.handedness);
+  const strictness = strictnessProp ?? savedStrictness;
   const [session, setSession] = useState(() => startSession(refs, strictness));
   const [flash, setFlash] = useState<{
     index: number;
@@ -163,7 +168,10 @@ export function KanjiWriter({
         {feedback && strings.lesson.feedback[feedback]}
       </p>
 
-      <div className="flex gap-3">
+      {/* Hint sits nearest the writing hand: rightmost for right-handers. */}
+      <div
+        className={`flex gap-3 ${handedness === "right" ? "flex-row-reverse" : ""}`}
+      >
         {mode === "recall" && (
           <>
             <ControlButton

@@ -14,15 +14,18 @@
     "live:android": "npx cap run android --live-reload --host 0.0.0.0 --port 3000",
     "test": "vitest",
     "e2e": "playwright test",
-    "data:build": "tsx scripts/build-data.ts"
+    "data:build": "tsx scripts/build-data.ts",
+    "icons:build": "tsx scripts/make-icons.ts"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.6.0",
     "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.6.0",
     "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.4",
     "dexie": "^4.4.7",

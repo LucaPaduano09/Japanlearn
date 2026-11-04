@@ -123,9 +123,16 @@ export function WritingCanvas({
     observer.observe(fit);
     const scheme = window.matchMedia("(prefers-color-scheme: dark)");
     scheme.addEventListener("change", scheduleDraw);
+    // A theme picked in Settings flips data-theme on <html>.
+    const theme = new MutationObserver(scheduleDraw);
+    theme.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     resize();
     return () => {
       observer.disconnect();
+      theme.disconnect();
       scheme.removeEventListener("change", scheduleDraw);
       cancelAnimationFrame(frame.current);
       frame.current = 0;

@@ -8,7 +8,7 @@ export const SPEECH_RATE = 0.8;
  * static prerender.
  */
 export function speak(text: string) {
-  import("@capacitor-community/text-to-speech")
+  plugin()
     .then(({ QueueStrategy, TextToSpeech }) =>
       TextToSpeech.speak({
         text,
@@ -18,4 +18,31 @@ export function speak(text: string) {
       }),
     )
     .catch(() => {});
+}
+
+function plugin() {
+  return import("@capacitor-community/text-to-speech");
+}
+
+/**
+ * Whether the device can speak Japanese. Browsers load voices lazily, so an
+ * empty list is retried once after the voices arrive.
+ */
+export async function hasJapaneseVoice(): Promise<boolean> {
+  try {
+    const { TextToSpeech } = await plugin();
+    const check = async () =>
+      (await TextToSpeech.getSupportedVoices()).voices.some((v) =>
+        v.lang.toLowerCase().startsWith("ja"),
+      );
+    if (await check()) return true;
+    if (typeof speechSynthesis === "undefined") return false;
+    await new Promise((resolve) => {
+      speechSynthesis.addEventListener("voiceschanged", resolve, { once: true });
+      setTimeout(resolve, 1500);
+    });
+    return await check();
+  } catch {
+    return false;
+  }
 }

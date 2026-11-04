@@ -14,8 +14,11 @@
   --kun-soft: #f0fdf4;
 }
 
+/* Dark palette: follows the system unless the user picked a theme in
+   Settings (data-theme on <html>, set before first paint in layout.tsx). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --background: #141414;
     --foreground: #f5f5f4;
     --muted: #a8a29e;
@@ -26,6 +29,32 @@
     --on-soft: #16202f;
     --kun: #5fd98a;
     --kun-soft: #14241a;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #141414;
+  --foreground: #f5f5f4;
+  --muted: #a8a29e;
+  --surface: #1f1f1f;
+  --border: #2e2e2e;
+  --accent: #fb923c;
+  --on: #7cb0ff;
+  --on-soft: #16202f;
+  --kun: #5fd98a;
+  --kun-soft: #14241a;
+}
+
+/* Tailwind's dark: variant must follow the same rule. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where(:root[data-theme="dark"] *) {
+    @slot;
   }
 }
 

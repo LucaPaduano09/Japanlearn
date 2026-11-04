@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Klee_One, Noto_Sans_JP } from "next/font/google";
+import { AppShell } from "@/components/ui/AppShell";
 import { TabBar } from "@/components/ui/TabBar";
 import { strings } from "@/lib/strings";
+import { THEME_STORAGE_KEY } from "@/lib/theme";
 import "./globals.css";
 
 const notoSansJp = Noto_Sans_JP({
@@ -31,17 +33,26 @@ export const viewport: Viewport = {
   ],
 };
 
+// Applies a theme picked in Settings before first paint (no light flash).
+const themeScript = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${notoSansJp.variable} ${kleeOne.variable} h-full antialiased`}
+      // data-theme is set by themeScript before React hydrates.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <main className="flex flex-1 flex-col pt-safe pb-[calc(4rem+env(safe-area-inset-bottom))]">
           {children}
         </main>
         <TabBar />
+        <AppShell />
       </body>
     </html>
   );

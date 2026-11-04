@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { SettingsScreen } from "@/components/settings/SettingsScreen";
 
 export default function SettingsPage() {
-  return <PlaceholderPage title="Settings" />;
+  return <SettingsScreen />;
 }

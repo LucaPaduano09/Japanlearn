@@ -52,6 +52,8 @@ export const useSettings = create<SettingsState>()((set, get) => ({
   },
 
   update: (patch) => {
+    // Saving before load() would replace the stored settings with defaults.
+    if (!get().loaded) return;
     set(patch);
     setSetting(KEY, pickSettings(get())).catch(console.error);
   },

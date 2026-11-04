@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { DeckId, StudyItem } from "./decks";
 import {
   DEFAULT_LIMITS,
   dayKey,
   dueIn,
   pickChoices,
-  planSession,
+  planReviews,
   seededRandom,
   spreadSiblings,
   streak,
@@ -36,60 +35,15 @@ function card(itemId: string, due: number, type = "recognize"): CardRecord {
   };
 }
 
-function item(deckId: DeckId, id: string): StudyItem {
-  return { deckId, id, chars: [id], reading: id };
-}
-
-const decks: Record<DeckId, StudyItem[]> = {
-  hiragana: [..."あいうえおかきくけこ"].map((c) => item("hiragana", c)),
-  katakana: [..."アイウ"].map((c) => item("katakana", c)),
-  "kanji-n5": [],
-  "vocab-n5": [],
-};
-
-describe("planSession", () => {
-  const base = {
-    cards: [],
-    decks,
-    activeDecks: ["hiragana"] as DeckId[],
-    introduced: new Set<string>(),
-    introducedToday: 0,
-    limits: DEFAULT_LIMITS,
-    now: NOW,
-  };
-
-  it("offers the first 5 new items of the active deck", () => {
-    const plan = planSession(base);
-    expect(plan.newItems.map((i) => i.id)).toEqual([..."あいうえお"]);
-    expect(plan.due).toEqual([]);
-  });
-
-  it("skips introduced items and respects the daily limit", () => {
-    const plan = planSession({
-      ...base,
-      introduced: new Set(["hiragana|あ", "hiragana|い"]),
-      introducedToday: 8,
-    });
-    expect(plan.newItems.map((i) => i.id)).toEqual([..."うえ"]);
-  });
-
-  it("moves on to the next active deck", () => {
-    const plan = planSession({
-      ...base,
-      activeDecks: ["hiragana", "katakana"],
-      introduced: new Set([..."あいうえおかきく"].map((c) => `hiragana|${c}`)),
-    });
-    expect(plan.newItems.map((i) => i.id)).toEqual([..."けこアイウ"]);
-  });
-
+describe("planReviews", () => {
   it("takes only due cards, oldest first, up to the limit", () => {
     const cards = [
       card("あ", NOW - HOUR),
       card("い", NOW + HOUR),
       card("う", NOW - DAY),
     ];
-    const plan = planSession({ ...base, cards, limits: { ...DEFAULT_LIMITS, reviews: 1 } });
-    expect(plan.due.map((c) => c.itemId)).toEqual(["う"]);
+    expect(planReviews({ cards, limits: DEFAULT_LIMITS, now: NOW }).map((c) => c.itemId)).toEqual(["う", "あ"]);
+    expect(planReviews({ cards, limits: { reviews: 1 }, now: NOW }).map((c) => c.itemId)).toEqual(["う"]);
   });
 });
 

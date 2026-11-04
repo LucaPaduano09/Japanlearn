@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Klee_One, Noto_Sans_JP } from "next/font/google";
 import { AppShell } from "@/components/ui/AppShell";
+import { LocaleGate } from "@/components/ui/LocaleGate";
 import { TabBar } from "@/components/ui/TabBar";
 import { strings } from "@/lib/strings";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
@@ -48,10 +49,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="flex min-h-full flex-col">
-        <main className="flex flex-1 flex-col pt-safe pb-[calc(4rem+env(safe-area-inset-bottom))]">
-          {children}
-        </main>
-        <TabBar />
+        <LocaleGate>
+          <main className="flex flex-1 flex-col pt-safe">{children}</main>
+          <TabBar />
+        </LocaleGate>
         <AppShell />
       </body>
     </html>

@@ -11,31 +11,54 @@ import {
   parseBackup,
   type Backup,
 } from "@/lib/db/backup";
+import { activityTimes, allItems } from "@/lib/db/repo";
 import { saveTextFile } from "@/lib/native/files";
 import { hasJapaneseVoice, speak } from "@/lib/native/tts";
-import type { SessionLimits } from "@/lib/srs/queue";
+import { streak, type SessionLimits } from "@/lib/srs/queue";
 import { STRICTNESS_SCALE, type Strictness } from "@/lib/strokes/compare";
-import { strings } from "@/lib/strings";
+import { strings, type LanguageSetting } from "@/lib/strings";
 import { useProgress } from "@/store/progress";
 import { useSettings, type Handedness, type Theme } from "@/store/settings";
 
-const t = strings.settings;
-
-/** Bounds and step for each daily-limit stepper. */
+/** Bounds and step for each limit stepper. */
 const LIMITS: Record<keyof SessionLimits, { min: number; max: number; step: number }> = {
-  newPerDay: { min: 0, max: 50, step: 5 },
-  newPerSession: { min: 1, max: 20, step: 1 },
   reviews: { min: 5, max: 100, step: 5 },
 };
 
+/** Profile tab: progress, the guides, then settings. */
 export function SettingsScreen() {
   const s = useSettings();
+  const t = strings.settings;
   // Editing before the stored values arrive would be overwritten by them.
   if (!s.loaded) return null;
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6">
-      <h1 className="text-2xl font-semibold">{t.title}</h1>
+      <h1 className="text-2xl font-semibold">{strings.profile.title}</h1>
+      <ProfileStats />
+
+      <Section title={strings.profile.guides}>
+        <GuideLink href="/welcome/" glyph="あ">
+          {strings.profile.howJapanese}
+        </GuideLink>
+        <GuideLink href="/learn/intro/?from=%2Fsettings%2F" glyph="音">
+          {strings.profile.howKanji}
+        </GuideLink>
+        <GuideLink href="/write/" glyph="書">
+          {strings.profile.freeWriting}
+        </GuideLink>
+      </Section>
+
+      <Section title={t.language}>
+        <Segmented<LanguageSetting>
+          label={t.language}
+          value={s.language}
+          options={["system", "it", "en"]}
+          names={t.languageOptions}
+          onChange={(language) => s.update({ language })}
+        />
+        {t.meaningsNote && <p className="text-sm text-muted">{t.meaningsNote}</p>}
+      </Section>
 
       <Section title={t.writing}>
         <Row label={t.strictness} hint={t.strictnessHint[s.strictness]}>
@@ -69,13 +92,7 @@ export function SettingsScreen() {
       </Section>
 
       <Section title={t.limits}>
-        {(
-          [
-            ["newPerDay", t.newPerDay],
-            ["newPerSession", t.newPerSession],
-            ["reviews", t.reviews],
-          ] as const
-        ).map(([key, label]) => (
+        {([["reviews", t.reviews]] as const).map(([key, label]) => (
           <Stepper
             key={key}
             label={label}
@@ -115,6 +132,42 @@ export function SettingsScreen() {
         <p className="text-sm text-muted">{t.version(pkg.version)}</p>
       </Section>
     </div>
+  );
+}
+
+function ProfileStats() {
+  const [stats, setStats] = useState<{ learned: number; streak: number } | null>(null);
+  useEffect(() => {
+    Promise.all([allItems(), activityTimes()]).then(([items, times]) =>
+      setStats({ learned: items.length, streak: streak(times, Date.now()) }),
+    );
+  }, []);
+  if (!stats) return null;
+  return (
+    <ul className="flex gap-2 text-sm">
+      <li className="rounded-full border border-border bg-surface px-4 py-1">
+        {strings.profile.learned(stats.learned)}
+      </li>
+      {stats.streak > 0 && (
+        <li className="rounded-full border border-border bg-surface px-4 py-1">
+          {strings.profile.streak(stats.streak)}
+        </li>
+      )}
+    </ul>
+  );
+}
+
+function GuideLink({ href, glyph, children }: { href: string; glyph: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="flex items-center gap-3 py-1 font-medium active:opacity-70">
+      <span lang="ja" className="font-hand flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-xl text-accent">
+        {glyph}
+      </span>
+      <span className="flex-1">{children}</span>
+      <span className="text-muted" aria-hidden>
+        →
+      </span>
+    </Link>
   );
 }
 
@@ -225,6 +278,7 @@ function Stepper({
   step: number;
   onChange: (v: number) => void;
 }) {
+  const t = strings.settings;
   const button =
     "h-9 w-9 rounded-full border border-border text-lg font-medium active:opacity-70 disabled:opacity-40";
   return (
@@ -258,6 +312,7 @@ function Stepper({
 }
 
 function VoiceStatus() {
+  const t = strings.settings;
   const [voice, setVoice] = useState<boolean | null>(null);
   useEffect(() => {
     hasJapaneseVoice().then(setVoice);
@@ -284,6 +339,7 @@ type BackupState =
   | { kind: "message"; text: string; error?: boolean };
 
 function BackupControls() {
+  const t = strings.settings;
   const [state, setState] = useState<BackupState>({ kind: "idle" });
   const input = useRef<HTMLInputElement>(null);
 

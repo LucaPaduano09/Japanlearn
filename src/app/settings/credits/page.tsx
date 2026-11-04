@@ -1,10 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { strings } from "@/lib/strings";
 
-const t = strings.credits;
-
 /** Attribution required by the data and font licenses (BOOTSTRAP §9). */
 export default function CreditsPage() {
+  const t = strings.credits;
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 py-6">
       <Link href="/settings/" className="text-sm text-accent">

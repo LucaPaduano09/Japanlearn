@@ -43,9 +43,15 @@ export const KIND_STYLE: Record<
 export function KanjiMeet({
   kanji,
   vocab,
+  showHeader = true,
+  introHref = "/learn/intro/",
 }: {
   kanji: KanjiEntry;
   vocab: VocabEntry[];
+  /** Big kanji + meaning on top; off when shown under a simpler summary. */
+  showHeader?: boolean;
+  /** Where "How readings work" leads (it returns to `?from=`). */
+  introHref?: string;
 }) {
   const [primary, ...others] = teachableMeanings(kanji);
   const readings = useMemo(() => lessonReadings(kanji, vocab), [kanji, vocab]);
@@ -53,27 +59,29 @@ export function KanjiMeet({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-5">
-        <p className="font-hand text-8xl leading-none">{kanji.char}</p>
-        <div>
-          <p className="text-xs tracking-wide text-muted uppercase">
-            {t.meaning}
-          </p>
-          <p className="text-2xl font-semibold">{primary}</p>
-          {others.length > 0 && (
-            <p className="mt-1 text-sm text-muted">
-              {t.alsoMeans}: {others.slice(0, 4).join(", ")}
+      {showHeader && (
+        <div className="flex items-center gap-5">
+          <p className="font-hand text-8xl leading-none">{kanji.char}</p>
+          <div>
+            <p className="text-xs tracking-wide text-muted uppercase">
+              {t.meaning}
             </p>
-          )}
-          <p className="mt-1 text-xs text-muted">
-            {t.strokes(kanji.strokeCount)}
-          </p>
+            <p className="text-2xl font-semibold">{primary}</p>
+            {others.length > 0 && (
+              <p className="mt-1 text-sm text-muted">
+                {t.alsoMeans}: {others.slice(0, 4).join(", ")}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-muted">
+              {t.strokes(kanji.strokeCount)}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <p className="text-sm text-muted">
         {t.readingsIntro}{" "}
-        <Link href="/learn/intro/" className="font-medium text-accent">
+        <Link href={introHref} className="font-medium text-accent">
           {t.howReadingsWork}
         </Link>
       </p>

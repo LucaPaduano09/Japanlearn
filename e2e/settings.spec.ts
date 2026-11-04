@@ -8,15 +8,15 @@ test("settings persist, switch the theme, and back up progress", async ({ page }
   await page.getByRole("radio", { name: "Dark" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("radio", { name: "Strict" }).click();
-  await page.getByRole("button", { name: "More: New items per day" }).click();
-  await expect(page.getByText("15", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "More: Reviews per session" }).click();
+  await expect(page.getByText("25", { exact: true })).toBeVisible();
   // Let the IndexedDB write land before reloading.
   await page.waitForTimeout(300);
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.getByRole("radio", { name: "Strict" })).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByText("15", { exact: true })).toBeVisible();
-  await page.getByRole("radio", { name: "System" }).click();
+  await expect(page.getByText("25", { exact: true })).toBeVisible();
+  await page.getByRole("radiogroup", { name: "Theme" }).getByRole("radio", { name: "System" }).click();
   await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.+/);
 
   // Export a backup, change something, import it back.

@@ -30,12 +30,13 @@ updating over the previous release.
 
 ## Learning and reviews
 
-- [ ] New install: Home shows "0 due · 5 new"; Start introduces あいうえお (meet → watch → trace → write).
-- [ ] After 10 minutes the 15 cards are due; reviewing them correctly moves them to days.
+- [ ] New install: the welcome guide explains the three scripts, vowels, consonant + vowel and words; "Start the first stage" opens The 5 vowels.
+- [ ] A stage goes intro → each sound (meet → watch → trace → write) → reward words with romaji and meaning; the path then shows the next stage as current.
+- [ ] After 10 minutes the 15 cards are due ("15 to review" on the path); reviewing them correctly moves them to days.
+- [ ] Language: System follows the phone; Italiano / English switch the whole app immediately and persist.
 - [ ] Each card type works: write from reading, write from audio, recognize, and (Kanji / Vocab decks) write from meaning and from reading.
 - [ ] Vocabulary: a multi-character word is written one box at a time.
-- [ ] Turning on Katakana / N5 Kanji / N5 Vocab in Learn adds their items to sessions; the daily new-item limit is respected.
-- [ ] Kanji course: finishing a lesson kanji adds its cards to reviews; progress shows on the Learn page.
+- [ ] Kanji stages: meaning and one word first, "How is it read?" opens the readings; "How kanji are read" returns to the stage.
 - [ ] Streak goes up after a session and survives closing the app.
 
 ## Audio

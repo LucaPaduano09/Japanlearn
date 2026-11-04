@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { KIND_STYLE, WordRow } from "@/components/learn/KanjiMeet";
-import { LESSONS } from "@/lib/content/lessons";
 import { loadKanjiN5 } from "@/lib/content/loader";
 import type { KanjiEntry } from "@/lib/content/types";
 import { matchWord, type ReadingKind } from "@/lib/content/wordReadings";
@@ -57,12 +57,17 @@ const EXAMPLES = {
 
 const SLIDES = ["what", "kinds", "both", "rule", "special"] as const;
 
-/** Five short slides on on'yomi vs kun'yomi, before the first lesson. */
+/**
+ * Five short slides on on'yomi vs kun'yomi, opened before the first kanji
+ * stage (or from the profile). `?from=` is where closing it returns to.
+ */
 export function ReadingsIntro() {
   const [kanji, setKanji] = useState<Map<string, KanjiEntry> | null>(null);
   const [slide, setSlide] = useState(0);
-  const learned = useProgress((s) => s.learned);
   const markIntroSeen = useProgress((s) => s.markIntroSeen);
+  const from = useSearchParams().get("from");
+  // Only same-app paths, never another origin.
+  const back = from?.startsWith("/") && !from.startsWith("//") ? from : "/";
 
   useEffect(() => {
     useProgress.getState().load();
@@ -75,14 +80,13 @@ export function ReadingsIntro() {
 
   const t = strings.intro;
   const last = slide === SLIDES.length - 1;
-  const started = Object.keys(learned).length > 0;
   const words = (list: Example[]) => <Words list={list} kanji={kanji} />;
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-5 px-4 py-4">
       <header className="flex items-center gap-3">
         <Link
-          href="/learn/"
+          href={back}
           aria-label={t.close}
           className="-ml-2 px-2 text-2xl leading-none text-muted"
         >
@@ -174,11 +178,11 @@ export function ReadingsIntro() {
         )}
         {last ? (
           <Link
-            href={started ? "/learn/" : `/learn/lesson/?id=${LESSONS[0].id}`}
+            href={back}
             onClick={markIntroSeen}
             className="flex-[2] rounded-2xl bg-accent py-4 text-center text-lg font-semibold text-white active:opacity-80"
           >
-            {started ? t.finishSeen : t.finish}
+            {t.finish}
           </Link>
         ) : (
           <button

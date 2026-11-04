@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Prompt, writePrompt } from "@/components/cards/Prompt";
 import { SpeakerIcon } from "@/components/cards/ListenCard";
-import { KanjiMeet } from "@/components/learn/KanjiMeet";
+import { KanjiSimpleMeet } from "@/components/cards/KanjiSimpleMeet";
 import { PrimaryButton } from "@/components/ui/Button";
 import { useStrokes } from "@/components/writing/useStrokes";
 import { WatchStep } from "@/components/writing/WatchStep";
@@ -32,6 +32,7 @@ export function ItemIntro({
   vocab,
   strictness,
   autoplayAudio,
+  returnTo,
   onLearned,
   onNext,
 }: {
@@ -41,6 +42,8 @@ export function ItemIntro({
   vocab: VocabEntry[];
   strictness: Strictness;
   autoplayAudio: boolean;
+  /** This screen's URL, for links that leave and come back. */
+  returnTo: string;
   onLearned: (grade: CharacterGrade) => void;
   onNext: () => void;
 }) {
@@ -59,7 +62,7 @@ export function ItemIntro({
       {step === "meet" && (
         <div className="flex flex-1 flex-col gap-5">
           {kanji ? (
-            <KanjiMeet kanji={kanji} vocab={vocab} />
+            <KanjiSimpleMeet kanji={kanji} vocab={vocab} returnTo={returnTo} />
           ) : (
             <MeetCard item={item} autoplayAudio={autoplayAudio} />
           )}

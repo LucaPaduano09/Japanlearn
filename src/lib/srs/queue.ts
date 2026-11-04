@@ -1,5 +1,4 @@
-import type { CardType, DeckId, StudyItem } from "./decks";
-import { itemKey } from "./decks";
+import type { CardType, DeckId } from "./decks";
 import type { SrsFields } from "./scheduler";
 
 /** A card as stored in Dexie: which item/type it is plus its FSRS state. */
@@ -13,63 +12,29 @@ export interface CardRecord extends SrsFields {
 export interface SessionLimits {
   /** Due cards per session. */
   reviews: number;
-  /** New items per session. */
-  newPerSession: number;
-  /** New items per (local) day, across sessions. */
-  newPerDay: number;
 }
 
-export const DEFAULT_LIMITS: SessionLimits = {
-  reviews: 20,
-  newPerSession: 5,
-  newPerDay: 10,
-};
+export const DEFAULT_LIMITS: SessionLimits = { reviews: 20 };
 
-export interface SessionPlan {
-  /** Items to introduce first (animation → trace → write from memory). */
-  newItems: StudyItem[];
-  /** Due cards, oldest first, siblings of one item kept apart. */
-  due: CardRecord[];
-}
-
-export function planSession({
+/**
+ * The due cards for one review session, oldest first, siblings of one item
+ * kept apart. New items come from the path's stages, not from here.
+ */
+export function planReviews({
   cards,
-  decks,
-  activeDecks,
-  introduced,
-  introducedToday,
   limits,
   now,
 }: {
   cards: CardRecord[];
-  decks: Record<DeckId, StudyItem[]>;
-  /** Decks that feed new items into sessions. */
-  activeDecks: DeckId[];
-  /** itemKey()s of every introduced item. */
-  introduced: Set<string>;
-  introducedToday: number;
   limits: SessionLimits;
   now: number;
-}): SessionPlan {
-  const due = spreadSiblings(
+}): CardRecord[] {
+  return spreadSiblings(
     cards
       .filter((c) => c.due <= now)
       .sort((a, b) => a.due - b.due)
       .slice(0, limits.reviews),
   );
-
-  const room = Math.max(
-    0,
-    Math.min(limits.newPerSession, limits.newPerDay - introducedToday),
-  );
-  const newItems: StudyItem[] = [];
-  for (const deckId of activeDecks) {
-    for (const item of decks[deckId]) {
-      if (newItems.length >= room) break;
-      if (!introduced.has(itemKey(item.deckId, item.id))) newItems.push(item);
-    }
-  }
-  return { newItems, due };
 }
 
 /**

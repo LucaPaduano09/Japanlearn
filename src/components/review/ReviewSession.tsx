@@ -2,34 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ItemIntro } from "@/components/cards/ItemIntro";
 import { ListenCard } from "@/components/cards/ListenCard";
 import { RecognizeCard } from "@/components/cards/RecognizeCard";
 import { WriteCard } from "@/components/cards/WriteCard";
 import { PrimaryButton } from "@/components/ui/Button";
-import { loadContent } from "@/lib/content/loader";
-import type { KanjiEntry, VocabEntry } from "@/lib/content/types";
-import {
-  allCards,
-  allItems,
-  countDue,
-  introduceItem,
-  nextDue,
-  reviewCard,
-} from "@/lib/db/repo";
-import {
-  buildDecks,
-  cardTypesFor,
-  itemKey,
-  recognizeAnswer,
-  type DeckId,
-  type StudyItem,
-} from "@/lib/srs/decks";
+import { loadLibrary, type Library } from "@/lib/content/library";
+import { allCards, countDue, nextDue, reviewCard } from "@/lib/db/repo";
+import { itemKey, recognizeAnswer, type StudyItem } from "@/lib/srs/decks";
 import { formatDue } from "@/lib/srs/format";
 import {
-  dayKey,
   pickChoices,
-  planSession,
+  planReviews,
   seededRandom,
   type CardRecord,
 } from "@/lib/srs/queue";
@@ -41,15 +24,9 @@ import {
 import { strings } from "@/lib/strings";
 import { useSettings } from "@/store/settings";
 
-type Step =
-  | { kind: "intro"; item: StudyItem }
-  | { kind: "card"; card: CardRecord; item: StudyItem };
-
-interface Library {
-  decks: Record<DeckId, StudyItem[]>;
-  items: Map<string, StudyItem>;
-  kanji: Map<string, KanjiEntry>;
-  vocab: VocabEntry[];
+interface Step {
+  card: CardRecord;
+  item: StudyItem;
 }
 
 interface Answered {
@@ -62,7 +39,7 @@ const CHOICES = 4;
 /** Items listed with their next due date on the summary screen. */
 const SUMMARY_ITEMS = 12;
 
-/** An SRS session: the due cards, then new-item intros (BOOTSTRAP §7). */
+/** An SRS session over the due cards; new items come from the path's stages. */
 export function ReviewSession() {
   const settings = useSettings();
   const [library, setLibrary] = useState<Library | null>(null);
@@ -71,59 +48,30 @@ export function ReviewSession() {
   const [pos, setPos] = useState(0);
   const [answered, setAnswered] = useState<Answered | null>(null);
   const [reviewed, setReviewed] = useState<Answered[]>([]);
-  const [learned, setLearned] = useState(0);
   const [after, setAfter] = useState<{
     dueNow: number;
     next: number | null;
     now: number;
   } | null>(null);
   const startedAt = useRef(0);
-  const pending = useRef<Promise<unknown>[]>([]);
 
   useEffect(() => {
-    useSettings.getState().load();
-    loadContent().then((content) => {
-      const decks = buildDecks(content);
-      const items = new Map(
-        Object.values(decks)
-          .flat()
-          .map((i) => [itemKey(i.deckId, i.id), i]),
-      );
-      setLibrary({
-        decks,
-        items,
-        kanji: new Map(content.kanji.map((k) => [k.char, k])),
-        vocab: content.vocab,
-      });
-    });
+    loadLibrary().then(setLibrary);
   }, []);
 
   // Plan (or re-plan, for "keep going") once content and settings are in.
   useEffect(() => {
     if (!library || !settings.loaded) return;
     let cancelled = false;
-    Promise.all([allCards(), allItems()]).then(([cards, items]) => {
+    allCards().then((cards) => {
       if (cancelled) return;
       const now = Date.now();
-      const plan = planSession({
-        cards,
-        decks: library.decks,
-        activeDecks: settings.activeDecks,
-        introduced: new Set(items.map((i) => i.id)),
-        introducedToday: items.filter(
-          (i) => dayKey(i.introducedAt) === dayKey(now),
-        ).length,
-        limits: settings.limits,
-        now,
-      });
-      // Due reviews first (they're the ones that slip), then new items.
-      const next: Step[] = [
-        ...plan.due.flatMap((card) => {
+      const next: Step[] = planReviews({ cards, limits: settings.limits, now }).flatMap(
+        (card) => {
           const item = library.items.get(itemKey(card.deckId, card.itemId));
-          return item ? [{ kind: "card" as const, card, item }] : [];
-        }),
-        ...plan.newItems.map((item) => ({ kind: "intro" as const, item })),
-      ];
+          return item ? [{ card, item }] : [];
+        },
+      );
       startedAt.current = now;
       setPos(0);
       setAnswered(null);
@@ -142,9 +90,8 @@ export function ReviewSession() {
   useEffect(() => {
     if (!finished) return;
     let cancelled = false;
-    Promise.all(pending.current).then(async () => {
-      const now = Date.now();
-      const [dueNow, next] = await Promise.all([countDue(now), nextDue()]);
+    const now = Date.now();
+    Promise.all([countDue(now), nextDue()]).then(([dueNow, next]) => {
       if (!cancelled) setAfter({ dueNow, next, now });
     });
     return () => {
@@ -181,8 +128,7 @@ export function ReviewSession() {
   const step = steps?.[pos];
 
   const choices = useMemo(() => {
-    if (!library || step?.kind !== "card" || step.card.type !== "recognize")
-      return [];
+    if (!library || !step || step.card.type !== "recognize") return [];
     const pool = library.decks[step.item.deckId].map(recognizeAnswer);
     return pickChoices(
       recognizeAnswer(step.item),
@@ -194,26 +140,22 @@ export function ReviewSession() {
 
   if (!library || !steps) return null;
 
-  if (steps.length === 0) {
-    return <CaughtUp noDecks={settings.activeDecks.length === 0} />;
-  }
+  if (steps.length === 0) return <CaughtUp />;
 
   if (finished) {
     return (
       <SessionDone
         reviewed={reviewed}
-        learned={learned}
         after={after}
         onKeepGoing={() => {
           setReviewed([]);
-          setLearned(0);
           setRound((r) => r + 1);
         }}
       />
     );
   }
 
-  const onWritten = (s: Extract<Step, { kind: "card" }>) =>
+  const onWritten = (s: Step) =>
     (tally: CharacterTally) =>
       answer(s.card, s.item, gradeCharacter(tally), tally.misses + tally.hints, true);
 
@@ -234,38 +176,12 @@ export function ReviewSession() {
           />
         </div>
         <p className="text-sm text-muted">
-          {step!.kind === "intro" && (
-            <span className="mr-2 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">
-              {strings.review.newItem}
-            </span>
-          )}
           {strings.review.position(pos + 1, steps.length)}
         </p>
       </header>
 
       {answered ? (
         <CardResult answered={answered} onNext={advance} />
-      ) : step!.kind === "intro" ? (
-        <ItemIntro
-          key={`intro-${pos}`}
-          item={step!.item}
-          kanji={
-            step!.item.deckId === "kanji-n5"
-              ? library.kanji.get(step!.item.id)
-              : undefined
-          }
-          vocab={library.vocab}
-          strictness={settings.strictness}
-          autoplayAudio={settings.autoplayAudio}
-          onLearned={(grade) => {
-            const item = step!.item;
-            pending.current.push(
-              introduceItem(item.deckId, item.id, cardTypesFor(item), grade),
-            );
-            setLearned((n) => n + 1);
-          }}
-          onNext={advance}
-        />
       ) : step!.card.type === "recognize" ? (
         <RecognizeCard
           key={`card-${pos}`}
@@ -327,7 +243,7 @@ function CardResult({
   );
 }
 
-function CaughtUp({ noDecks }: { noDecks: boolean }) {
+function CaughtUp() {
   const [next, setNext] = useState<{ due: number; now: number } | null>(null);
   useEffect(() => {
     nextDue().then((due) => due && setNext({ due, now: Date.now() }));
@@ -338,15 +254,15 @@ function CaughtUp({ noDecks }: { noDecks: boolean }) {
       <div>
         <h1 className="text-2xl font-semibold">{strings.review.caughtUp}</h1>
         <p className="mt-1 text-muted">
-          {noDecks ? strings.review.noDecks : strings.review.caughtUpBody}
+          {strings.review.caughtUpBody}
           {next && ` ${strings.review.nextDue(formatDue(next.due, next.now))}`}
         </p>
       </div>
       <Link
-        href="/learn/"
+        href="/"
         className="w-full max-w-xs rounded-2xl bg-accent py-4 text-lg font-semibold text-white active:opacity-80"
       >
-        {noDecks ? strings.review.pickDeck : strings.review.learnMore}
+        {strings.review.toPath}
       </Link>
     </div>
   );
@@ -354,12 +270,10 @@ function CaughtUp({ noDecks }: { noDecks: boolean }) {
 
 function SessionDone({
   reviewed,
-  learned,
   after,
   onKeepGoing,
 }: {
   reviewed: Answered[];
-  learned: number;
   after: { dueNow: number; next: number | null; now: number } | null;
   onKeepGoing: () => void;
 }) {
@@ -373,7 +287,7 @@ function SessionDone({
       <div>
         <h1 className="text-2xl font-semibold">{strings.review.done}</h1>
         <p className="mt-1 text-muted">
-          {strings.review.doneBody(reviewed.length, learned)}
+          {strings.review.doneBody(reviewed.length)}
         </p>
       </div>
 

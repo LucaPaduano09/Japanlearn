@@ -1,13 +1,14 @@
 import { create } from "zustand";
 import { getSetting, setSetting } from "@/lib/db/repo";
-import type { DeckId } from "@/lib/srs/decks";
 import { DEFAULT_LIMITS, type SessionLimits } from "@/lib/srs/queue";
 import type { Strictness } from "@/lib/strokes/compare";
+import type { LanguageSetting } from "@/lib/strings";
 
 export type Handedness = "right" | "left";
 export type Theme = "system" | "light" | "dark";
 
 export interface Settings {
+  language: LanguageSetting;
   strictness: Strictness;
   /** Which side the writing controls sit on. */
   handedness: Handedness;
@@ -15,17 +16,18 @@ export interface Settings {
   /** Speak kana and words aloud when they're shown. */
   autoplayAudio: boolean;
   limits: SessionLimits;
-  /** Decks that feed new items into review sessions. */
-  activeDecks: DeckId[];
+  /** The "How Japanese works" welcome was finished or skipped. */
+  welcomeSeen: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  language: "system",
   strictness: "normal",
   handedness: "right",
   theme: "system",
   autoplayAudio: true,
   limits: DEFAULT_LIMITS,
-  activeDecks: ["hiragana"],
+  welcomeSeen: false,
 };
 
 const KEY = "settings";
@@ -44,9 +46,8 @@ export const useSettings = create<SettingsState>()((set, get) => ({
   load: async () => {
     const stored = await getSetting<Partial<Settings>>(KEY, {});
     set({
-      ...DEFAULT_SETTINGS,
-      ...stored,
-      limits: { ...DEFAULT_LIMITS, ...stored.limits },
+      ...pickSettings({ ...DEFAULT_SETTINGS, ...stored }),
+      limits: { reviews: stored.limits?.reviews ?? DEFAULT_LIMITS.reviews },
       loaded: true,
     });
   },
@@ -61,11 +62,12 @@ export const useSettings = create<SettingsState>()((set, get) => ({
 
 export function pickSettings(s: Settings): Settings {
   return {
+    language: s.language,
     strictness: s.strictness,
     handedness: s.handedness,
     theme: s.theme,
     autoplayAudio: s.autoplayAudio,
     limits: s.limits,
-    activeDecks: s.activeDecks,
+    welcomeSeen: s.welcomeSeen,
   };
 }

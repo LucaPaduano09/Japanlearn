@@ -6,8 +6,8 @@
  *    kanji as today's N5, and it's the only JLPT tag KANJIDIC2 ships.
  *  - vocab-n5.json: ~700 N5 words from elzup/jlpt-word-list (MIT), since
  *    JMdict dropped JLPT tags after the 2010 level revision.
- *  - strokes/<codepoint-hex>.json: KanjiVG stroke paths for every kana and
- *    N5 kanji character, resampled to evenly spaced points.
+ *  - strokes/<codepoint-hex>.json: KanjiVG stroke paths for every kana, N5
+ *    kanji and character used in an N5 word, resampled to evenly spaced points.
  *
  * Attribution (must stay in the shipped Credits screen):
  *  - KanjiVG (c) Ulrich Apel, CC BY-SA 3.0 - https://kanjivg.tagaini.net
@@ -224,6 +224,11 @@ function parseKanjiVgSvg(svg: string): RefStroke[] | null {
   return strokes.map((s) => sampleStroke(s.d, viewBoxSize));
 }
 
+/** Kana, the long-vowel mark, 々 and CJK ideographs; not ～, punctuation or spaces. */
+function isWritable(char: string): boolean {
+  return /[ぁ-ゖァ-ヺー々一-鿿]/u.test(char);
+}
+
 // --- glue --------------------------------------------------------------------
 
 async function writeJson(relPath: string, data: unknown): Promise<void> {
@@ -250,7 +255,15 @@ async function main() {
   await writeJson("vocab-n5.json", vocab);
   console.log(`  ${vocab.length} words`);
 
-  const chars = [...new Set([...kana.map((k) => k.char), ...kanji.map((k) => k.char)])];
+  const chars = [
+    ...new Set([
+      ...kana.map((k) => k.char),
+      ...kanji.map((k) => k.char),
+      // Vocab cards are written character by character, so every kana
+      // (small ones and ー too) and kanji used in a word needs strokes.
+      ...vocab.flatMap((v) => [...v.expression, ...v.reading]).filter(isWritable),
+    ]),
+  ];
   console.log(`Strokes (KanjiVG) for ${chars.length} characters...`);
   let written = 0;
   const missing: string[] = [];

@@ -11,16 +11,16 @@ export function LessonList() {
   const learned = useProgress((s) => s.learned);
   const introSeen = useProgress((s) => s.introSeen);
   useEffect(() => {
-    useProgress.persist.rehydrate();
+    useProgress.getState().load();
   }, []);
 
   const current = LESSONS.find((l) => l.kanji.some((c) => !learned[c]));
   const started = Object.keys(learned).length > 0;
 
   return (
-    <div className="mx-auto w-full max-w-lg px-4 py-6">
-      <h1 className="text-2xl font-semibold">{strings.learn.title}</h1>
-      <p className="mt-1 text-muted">{strings.learn.subtitle}</p>
+    <section>
+      <h2 className="text-lg font-semibold">{strings.learn.course}</h2>
+      <p className="mt-1 text-sm text-muted">{strings.learn.subtitle}</p>
 
       {!introSeen && !started ? (
         <Link
@@ -130,6 +130,6 @@ export function LessonList() {
           );
         })}
       </ol>
-    </div>
+    </section>
   );
 }

@@ -65,7 +65,7 @@ export function ReadingsIntro() {
   const markIntroSeen = useProgress((s) => s.markIntroSeen);
 
   useEffect(() => {
-    useProgress.persist.rehydrate();
+    useProgress.getState().load();
     loadKanjiN5().then((list) =>
       setKanji(new Map(list.map((k) => [k.char, k]))),
     );

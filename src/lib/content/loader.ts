@@ -8,10 +8,21 @@ export interface StrokeData {
   strokes: RefStroke[];
 }
 
-async function loadJson<T>(path: string): Promise<T> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
-  return res.json() as Promise<T>;
+/** Content never changes at runtime, so each file is fetched once per app run. */
+const cache = new Map<string, Promise<unknown>>();
+
+function loadJson<T>(path: string): Promise<T> {
+  let pending = cache.get(path);
+  if (!pending) {
+    pending = fetch(path).then((res) => {
+      if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
+      return res.json();
+    });
+    // A failed fetch shouldn't stick: let the next call retry.
+    pending.catch(() => cache.delete(path));
+    cache.set(path, pending);
+  }
+  return pending as Promise<T>;
 }
 
 export function loadKana(): Promise<KanaEntry[]> {
@@ -24,6 +35,16 @@ export function loadKanjiN5(): Promise<KanjiEntry[]> {
 
 export function loadVocabN5(): Promise<VocabEntry[]> {
   return loadJson("/data/vocab-n5.json");
+}
+
+/** All three content files at once (decks are built from them together). */
+export async function loadContent() {
+  const [kana, kanji, vocab] = await Promise.all([
+    loadKana(),
+    loadKanjiN5(),
+    loadVocabN5(),
+  ]);
+  return { kana, kanji, vocab };
 }
 
 /** Reference strokes for a single character, or null if none are shipped. */

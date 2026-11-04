@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { KanjiMeet } from "@/components/learn/KanjiMeet";
 import { KanjiWriter } from "@/components/writing/KanjiWriter";
-import { StrokeGuide } from "@/components/writing/StrokeGuide";
+import { PrimaryButton } from "@/components/ui/Button";
+import { WatchStep } from "@/components/writing/WatchStep";
 import { findLesson, LESSONS, type Lesson } from "@/lib/content/lessons";
 import { loadKanjiN5, loadStrokes, loadVocabN5 } from "@/lib/content/loader";
 import { teachableMeanings } from "@/lib/content/readings";
@@ -33,9 +34,10 @@ export function LessonFlow() {
   const lesson = findLesson(params.get("id"));
   const startChar = params.get("k");
   const [content, setContent] = useState<Content | null>(null);
+  const progressLoaded = useProgress((s) => s.loaded);
 
   useEffect(() => {
-    useProgress.persist.rehydrate();
+    useProgress.getState().load();
     Promise.all([loadKanjiN5(), loadVocabN5()]).then(([kanji, vocab]) =>
       setContent({ kanji: new Map(kanji.map((k) => [k.char, k])), vocab }),
     );
@@ -51,7 +53,8 @@ export function LessonFlow() {
       </div>
     );
   }
-  if (!content) return null;
+  // The runner picks its starting kanji from progress, so wait for it.
+  if (!content || !progressLoaded) return null;
   return (
     <LessonRunner
       key={`${lesson.id}-${startChar}`}
@@ -201,7 +204,7 @@ function LessonRunner({
       )}
 
       {step === "watch" && strokes && (
-        <WatchStep strokes={strokes} onNext={() => setStep("trace")} />
+        <WatchStep strokes={[strokes]} onNext={() => setStep("trace")} />
       )}
 
       {step === "trace" && strokes && (
@@ -291,48 +294,6 @@ function StepTabs({ step }: { step: Step }) {
   );
 }
 
-function WatchStep({
-  strokes,
-  onNext,
-}: {
-  strokes: RefStroke[];
-  onNext: () => void;
-}) {
-  const [replay, setReplay] = useState(0);
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <p className="text-center text-sm text-muted">
-        {strings.lesson.watchHint}
-      </p>
-      <div className="relative min-h-0 flex-1">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <StrokeGuide
-            key={replay}
-            strokes={strokes}
-            strokeMs={700}
-            gapMs={250}
-            className="aspect-square max-h-full w-full max-w-full rounded-2xl border border-border bg-surface text-accent"
-          />
-        </div>
-      </div>
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => setReplay((r) => r + 1)}
-          className="flex-1 rounded-2xl border border-border bg-surface py-3 font-medium active:opacity-70"
-        >
-          {strings.lesson.replay}
-        </button>
-        <div className="flex-[2]">
-          <PrimaryButton onClick={onNext}>
-            {strings.lesson.toTrace}
-          </PrimaryButton>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function LessonComplete({
   lesson,
   onRestart,
@@ -376,23 +337,5 @@ function LessonComplete({
         </Link>
       </div>
     </div>
-  );
-}
-
-function PrimaryButton({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full rounded-2xl bg-accent py-4 text-lg font-semibold text-white active:opacity-80"
-    >
-      {children}
-    </button>
   );
 }

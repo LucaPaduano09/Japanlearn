@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/components/ui/PlaceholderPage";
+import { ReviewSession } from "@/components/review/ReviewSession";
 
 export default function ReviewPage() {
-  return <PlaceholderPage title="Review" />;
+  return <ReviewSession />;
 }

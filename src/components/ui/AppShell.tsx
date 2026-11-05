@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { hideSplash, setStatusBarDark } from "@/lib/native/shell";
+import { warmUpSpeech } from "@/lib/native/tts";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 import { useSettings, type Theme } from "@/store/settings";
 
@@ -16,6 +17,8 @@ export function AppShell() {
   useEffect(() => {
     useSettings.getState().load().finally(hideSplash);
   }, []);
+
+  useEffect(() => warmUpSpeech(), []);
 
   useEffect(() => {
     if (!loaded) return;

@@ -83,6 +83,16 @@ test("read a word aloud: a miss, then the word spelled with kanji", async ({ pag
   await expect(page.getByRole("heading", { name: "Session complete" })).toBeVisible();
 });
 
+test("a recognizer that never stops on its own still gives up", async ({ page }) => {
+  await page.goto("/review/");
+  await page.evaluate(() => ((window as unknown as { recognizerStuck: boolean }).recognizerStuck = true));
+  await page.getByRole("button", { name: "Speak", exact: true }).click();
+  await expect(page.getByText("Listening…")).toBeVisible();
+  // About 5 s without words, then it stops and says so.
+  await expect(page.getByText("I didn't hear anything.")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("button", { name: "Speak", exact: true })).toBeEnabled();
+});
+
 test("three misses count as wrong", async ({ page }) => {
   await page.goto("/review/");
   await hear(page, "犬");

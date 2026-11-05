@@ -1,5 +1,13 @@
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import {
+  ListenError,
+  runListening,
+  type Engine,
+  type Listening,
+} from "@/lib/speech/session";
 import { SPOKEN_CARD_TYPES, type CardType } from "@/lib/srs/decks";
+
+export { ListenError, type Listening };
 
 /**
  * Speech recognition: the native engine in the app (via
@@ -11,27 +19,6 @@ import { SPOKEN_CARD_TYPES, type CardType } from "@/lib/srs/decks";
 const LANG = "ja-JP";
 /** Alternatives asked for (the plugin's maximum). */
 const MAX_RESULTS = 5;
-/** Time to start talking before listening gives up. */
-const START_MS = 5000;
-/** Silence after the last word before listening stops on its own. */
-const SILENCE_MS = 1500;
-/** The final transcript can arrive a moment after the engine stops. */
-const FINAL_MS = 800;
-
-export type ListenErrorKind = "permission" | "unavailable" | "failed";
-
-export class ListenError extends Error {
-  constructor(readonly kind: ListenErrorKind) {
-    super(kind);
-  }
-}
-
-export interface Listening {
-  /** Stops now; `result` resolves with what was heard so far. */
-  stop: () => void;
-  /** Alternatives, most likely first; empty if nothing was understood. */
-  result: Promise<string[]>;
-}
 
 let available: Promise<boolean> | null = null;
 
@@ -49,7 +36,7 @@ export async function skippedCardTypes(speakingEnabled: boolean): Promise<CardTy
 
 /** Starts listening for one short answer. `onPartial` gets the transcript as it grows. */
 export function listen(onPartial: (text: string) => void): Listening {
-  return Capacitor.isNativePlatform() ? listenNative(onPartial) : listenWeb(onPartial);
+  return runListening(Capacitor.isNativePlatform() ? nativeEngine() : webEngine(), onPartial);
 }
 
 function plugin() {
@@ -77,70 +64,38 @@ async function nativePermission(): Promise<boolean> {
 }
 
 /**
- * Listens with partial results on both platforms: without them iOS only
- * answers after stop(), and Android shows its own popup. Stopping is ours:
- * on silence, on stop(), or when the engine ends by itself.
+ * Partial results on both platforms: without them iOS only answers after
+ * stop(), and Android shows its own popup. Both report the last transcript
+ * through partialResults, also after "stopped".
  */
-function listenNative(onPartial: (text: string) => void): Listening {
-  let matches: string[] = [];
-  let done = false;
-  let stopped = false;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+function nativeEngine(): Engine {
   const handles: Promise<PluginListenerHandle>[] = [];
-  let finish: () => void = () => {};
-
-  const wait = (ms: number, then: () => void) => {
-    clearTimeout(timer);
-    timer = setTimeout(then, ms);
-  };
-  const stopEngine = () => {
-    if (stopped) return;
-    stopped = true;
-    plugin().then((sr) => sr.stop()).catch(() => {});
-    wait(FINAL_MS, finish);
-  };
-
-  const result = new Promise<string[]>((resolve, reject) => {
-    finish = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
+  let aborted = false;
+  const stop = () => plugin().then((sr) => sr.stop()).catch(() => {});
+  return {
+    start: (events) => {
+      (async () => {
+        if (!(await nativePermission())) throw new ListenError("permission");
+        const sr = await plugin();
+        handles.push(
+          sr.addListener("partialResults", (data) => events.matches(data.matches ?? [])),
+          sr.addListener("listeningState", ({ status }) => {
+            if (status === "stopped") events.ended(false);
+          }),
+        );
+        await Promise.all(handles);
+        if (aborted) return;
+        await sr.start({ language: LANG, maxResults: MAX_RESULTS, partialResults: true, popup: false });
+        events.started();
+      })().catch((e) => events.failed(e instanceof ListenError ? e : new ListenError("failed")));
+    },
+    stop,
+    abort: () => {
+      aborted = true;
+      stop();
       for (const h of handles) h.then((x) => x.remove()).catch(() => {});
-      if (!stopped) plugin().then((sr) => sr.stop()).catch(() => {});
-      resolve(matches);
-    };
-    (async () => {
-      if (!(await nativePermission())) throw new ListenError("permission");
-      const sr = await plugin();
-      handles.push(
-        sr.addListener("partialResults", (data) => {
-          if (done || !data.matches?.length) return;
-          matches = data.matches;
-          onPartial(matches[0]);
-          // After the engine stopped, this is the final transcript.
-          if (stopped) finish();
-          else wait(SILENCE_MS, stopEngine);
-        }),
-        sr.addListener("listeningState", ({ status }) => {
-          if (status === "stopped" && !stopped) {
-            stopped = true;
-            wait(FINAL_MS, finish);
-          }
-        }),
-      );
-      await Promise.all(handles);
-      wait(START_MS, stopEngine);
-      await sr.start({ language: LANG, maxResults: MAX_RESULTS, partialResults: true, popup: false });
-    })().catch((e) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      for (const h of handles) h.then((x) => x.remove()).catch(() => {});
-      reject(e instanceof ListenError ? e : new ListenError("failed"));
-    });
-  });
-
-  return { stop: () => !done && stopEngine(), result };
+    },
+  };
 }
 
 // The Web Speech API isn't in TypeScript's DOM types everywhere yet.
@@ -149,11 +104,13 @@ interface WebRecognition {
   interimResults: boolean;
   maxAlternatives: number;
   continuous: boolean;
+  onstart: (() => void) | null;
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
+  abort?: () => void;
 }
 type WebRecognitionCtor = new () => WebRecognition;
 
@@ -167,46 +124,51 @@ function webAvailable() {
   return webRecognition() !== undefined;
 }
 
-function listenWeb(onPartial: (text: string) => void): Listening {
+function webEngine(): Engine {
   const Ctor = webRecognition();
-  if (!Ctor) {
-    return { stop: () => {}, result: Promise.reject(new ListenError("unavailable")) };
-  }
-  const rec = new Ctor();
-  rec.lang = LANG;
-  rec.interimResults = true;
-  rec.maxAlternatives = MAX_RESULTS;
-  rec.continuous = false;
-  let matches: string[] = [];
-  const result = new Promise<string[]>((resolve, reject) => {
-    let failed = false;
-    rec.onresult = (e) => {
-      // Earlier segments joined, then each alternative of the latest one.
-      const segments = Array.from(e.results);
-      const head = segments
-        .slice(0, -1)
-        .map((s) => s[0]?.transcript ?? "")
-        .join("");
-      matches = Array.from(segments.at(-1) ?? [], (alt) => head + alt.transcript);
-      if (matches[0]) onPartial(matches[0]);
-    };
-    rec.onerror = (e) => {
-      if (e.error === "no-speech" || e.error === "aborted") return;
-      failed = true;
-      reject(
-        new ListenError(
-          e.error === "not-allowed" || e.error === "service-not-allowed" ? "permission" : "failed",
-        ),
-      );
-    };
-    rec.onend = () => {
-      if (!failed) resolve(matches);
-    };
-  });
-  try {
-    rec.start();
-  } catch {
-    return { stop: () => {}, result: Promise.reject(new ListenError("failed")) };
-  }
-  return { stop: () => rec.stop(), result };
+  let rec: WebRecognition | null = null;
+  return {
+    start: (events) => {
+      if (!Ctor) return events.failed(new ListenError("unavailable"));
+      rec = new Ctor();
+      rec.lang = LANG;
+      rec.interimResults = true;
+      rec.maxAlternatives = MAX_RESULTS;
+      rec.continuous = false;
+      rec.onstart = events.started;
+      rec.onresult = (e) => {
+        // Earlier segments joined, then each alternative of the latest one.
+        const segments = Array.from(e.results);
+        const head = segments
+          .slice(0, -1)
+          .map((s) => s[0]?.transcript ?? "")
+          .join("");
+        events.matches(Array.from(segments.at(-1) ?? [], (alt) => head + alt.transcript));
+      };
+      rec.onerror = (e) => {
+        if (e.error === "aborted") return;
+        if (e.error === "no-speech") return events.ended(true);
+        events.failed(
+          new ListenError(
+            e.error === "not-allowed" || e.error === "service-not-allowed" ? "permission" : "failed",
+          ),
+        );
+      };
+      // onend comes after the last onresult: nothing more will follow.
+      rec.onend = () => events.ended(true);
+      rec.start();
+    },
+    stop: () => {
+      try {
+        rec?.stop();
+      } catch {}
+    },
+    abort: () => {
+      if (!rec) return;
+      rec.onstart = rec.onresult = rec.onerror = rec.onend = null;
+      try {
+        (rec.abort ?? rec.stop).call(rec);
+      } catch {}
+    },
+  };
 }

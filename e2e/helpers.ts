@@ -32,18 +32,24 @@ export async function recordSpeech(page: Page) {
     const spoken: string[] = [];
     (window as unknown as { spoken: string[] }).spoken = spoken;
     window.speechSynthesis.speak = (u: SpeechSynthesisUtterance) => {
-      spoken.push(u.text);
+      // The silent warm-up at the first touch isn't something the app said.
+      if (u.text.trim()) spoken.push(u.text);
     };
   });
 }
 
 /**
  * A fake Web Speech recognizer: each start() "hears" window.nextHeard,
- * as one result with those alternatives, then ends.
+ * as one result with those alternatives, then ends. With
+ * window.recognizerStuck it behaves like WebKit can: it opens the
+ * microphone and never ends by itself.
  */
 export async function fakeRecognizer(page: Page) {
   await page.addInitScript(() => {
-    const w = window as unknown as Record<string, unknown> & { nextHeard: string[] };
+    const w = window as unknown as Record<string, unknown> & {
+      nextHeard: string[];
+      recognizerStuck?: boolean;
+    };
     w.nextHeard = [];
     class FakeRecognition {
       lang = "";
@@ -52,9 +58,12 @@ export async function fakeRecognizer(page: Page) {
       continuous = false;
       onresult: ((e: unknown) => void) | null = null;
       onerror: ((e: unknown) => void) | null = null;
+      onstart: (() => void) | null = null;
       onend: (() => void) | null = null;
       start() {
         setTimeout(() => {
+          this.onstart?.();
+          if (w.recognizerStuck) return;
           const alternatives = w.nextHeard.map((transcript) => ({ transcript }));
           if (alternatives.length) this.onresult?.({ results: [alternatives] });
           this.onend?.();

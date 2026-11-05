@@ -182,19 +182,19 @@ export function cardTypesFor(item: StudyItem): CardType[] {
   switch (item.deckId) {
     case "hiragana":
     case "katakana":
-      // じ/ぢ and ず/づ sound the same, so they skip the audio card.
+      // じ/ぢ and ず/づ sound the same, so they skip the audio card (saying
+      // them is fine: either sound counts).
       return hasAmbiguousSound(item)
-        ? ["write-from-reading", "recognize"]
-        : ["write-from-reading", "write-from-audio", "recognize"];
+        ? ["write-from-reading", "recognize", "speak"]
+        : ["write-from-reading", "write-from-audio", "recognize", "speak"];
     case "kanji-n5":
     case "kanji-n4":
       return ["write-from-meaning", "write-from-reading", "recognize"];
     case "vocab-n5":
     case "vocab-n4":
       // A word with kanji can't be written from sound alone (homophones),
-      // so it is prompted with its kana instead.
-      // Words are also read aloud; single kana and kanji aren't, since
-      // recognizers turn a lone sound into whatever word it might be.
+      // so it is prompted with its kana instead. Kana and words are read
+      // aloud; a kanji alone has several readings, so it isn't.
       return [
         "write-from-meaning",
         hasKanji(item) ? "write-from-reading" : "write-from-audio",

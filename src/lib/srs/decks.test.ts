@@ -74,11 +74,12 @@ describe("kanjiReading", () => {
 });
 
 describe("cardTypesFor", () => {
-  it("gives kana a writing, an audio and a recognize card", () => {
+  it("gives kana a writing, an audio, a recognize and a speaking card", () => {
     expect(cardTypesFor(decks.hiragana[0])).toEqual([
       "write-from-reading",
       "write-from-audio",
       "recognize",
+      "speak",
     ]);
   });
 
@@ -95,10 +96,10 @@ describe("cardTypesFor", () => {
     expect(cardTypesFor(kanaOnly)).toContain("write-from-audio");
   });
 
-  it("has words, and only words, read aloud", () => {
+  it("has kana and words read aloud, but not lone kanji", () => {
     expect(cardTypesFor(decks["vocab-n5"][0])).toContain("speak");
     expect(cardTypesFor(decks["vocab-n4"][0])).toContain("speak");
-    expect(cardTypesFor(decks.hiragana[0])).not.toContain("speak");
+    expect(cardTypesFor(decks.katakana[0])).toContain("speak");
     expect(cardTypesFor(decks["kanji-n5"][0])).not.toContain("speak");
   });
 });

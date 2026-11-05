@@ -5,12 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ListenCard } from "@/components/cards/ListenCard";
 import { RecognizeCard } from "@/components/cards/RecognizeCard";
 import { SpeakCard } from "@/components/cards/SpeakCard";
+import { readingIndexOf } from "@/components/cards/speech";
 import { WriteCard } from "@/components/cards/WriteCard";
 import { PrimaryButton } from "@/components/ui/Button";
 import { loadLibrary, type Library } from "@/lib/content/library";
 import { addMissingCards, allCards, countDue, nextDue, reviewCard } from "@/lib/db/repo";
 import { skippedCardTypes } from "@/lib/native/stt";
-import { buildReadingIndex } from "@/lib/speech/match";
 import {
   itemKey,
   recognizeAnswer,
@@ -148,14 +148,6 @@ export function ReviewSession() {
 
   const step = steps?.[pos];
 
-  const readingIndex = useMemo(
-    () =>
-      buildReadingIndex(
-        library ? [...library.decks["vocab-n5"], ...library.decks["vocab-n4"]] : [],
-      ),
-    [library],
-  );
-
   /** "Can't speak now": the rest of the session (and "keep going") goes without them. */
   const skipSpoken = () => {
     setSkip((s) => [...new Set([...s, ...SPOKEN_CARD_TYPES])]);
@@ -238,7 +230,7 @@ export function ReviewSession() {
         <SpeakCard
           key={`card-${pos}`}
           item={step!.item}
-          index={readingIndex}
+          index={readingIndexOf(library)}
           autoplayAudio={settings.autoplayAudio}
           onAnswer={(grade, mistakes) => answer(step!.card, step!.item, grade, mistakes, true)}
           onSkip={skipSpoken}

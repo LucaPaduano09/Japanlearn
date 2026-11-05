@@ -1,3 +1,4 @@
+import { toHiragana } from "@/lib/content/romaji";
 import type { StudyItem } from "@/lib/srs/decks";
 
 /**
@@ -19,9 +20,16 @@ export function normalizeSpoken(text: string): string {
     .toLowerCase();
 }
 
-/** Katakana → hiragana (ァ..ヶ sit 0x60 after ぁ..ゖ); ー stays. */
-export function toHiragana(text: string): string {
-  return text.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+/** Kana pairs that sound the same: either spelling was said right. */
+const SAME_SOUND: Record<string, string> = { ぢ: "じ", づ: "ず", を: "お" };
+
+function bySound(text: string): string {
+  return text.replace(/[ぢづを]/g, (c) => SAME_SOUND[c]);
+}
+
+/** A lone sound comes back stretched or doubled ("ああ", "あー", "あっ"): one is enough. */
+function loneSound(text: string): string {
+  return text.replace(/[ーっ]/g, "").replace(/(.)\1+/gu, "$1");
 }
 
 /** 1 → 一, 20 → 二十, 105 → 百五, 3000 → 三千 (up to 9999; larger stays as digits). */
@@ -48,7 +56,7 @@ export function buildReadingIndex(items: StudyItem[]): ReadingIndex {
   for (const item of items) {
     const written = normalizeSpoken(item.chars.join(""));
     const readings = index.get(written) ?? new Set<string>();
-    readings.add(normalizeSpoken(item.reading));
+    readings.add(bySound(normalizeSpoken(item.reading)));
     index.set(written, readings);
   }
   return index;
@@ -63,18 +71,28 @@ export interface SpokenResult {
 /**
  * Whether any transcript is the item said aloud. A transcript counts when it
  * is the word's kana, the word as written, or another word with the same
- * reading (かみ comes back as 髪 for 紙: the sound was right).
+ * reading (かみ comes back as 髪 for 紙: the sound was right). A single kana
+ * also counts as its romaji or as a one-sound word (め → 目).
  */
 export function matchSpoken(
-  item: Pick<StudyItem, "chars" | "reading">,
+  item: Pick<StudyItem, "chars" | "reading" | "romaji">,
   transcripts: string[],
   index: ReadingIndex = new Map(),
 ): SpokenResult {
-  const reading = normalizeSpoken(item.reading);
-  const written = normalizeSpoken(item.chars.join(""));
+  const reading = bySound(normalizeSpoken(item.reading));
+  const written = bySound(normalizeSpoken(item.chars.join("")));
+  const kana = item.romaji !== undefined;
+  // "ji (from chi)" → "ji".
+  const romaji = item.romaji?.split(" ")[0];
   for (const t of transcripts) {
-    const heard = normalizeSpoken(t);
-    if (heard === reading || heard === written || index.get(heard)?.has(reading)) {
+    const normal = normalizeSpoken(t);
+    const heard = kana ? loneSound(bySound(normal)) : bySound(normal);
+    if (
+      heard === reading ||
+      heard === written ||
+      heard === romaji ||
+      index.get(normal)?.has(reading)
+    ) {
       return { ok: true, heard: t.trim() };
     }
   }

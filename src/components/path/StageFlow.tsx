@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ItemIntro } from "@/components/cards/ItemIntro";
+import { readingIndexOf, useSpeakingEnabled } from "@/components/cards/speech";
 import { SpeakerIcon } from "@/components/cards/ListenCard";
 import { Furigana } from "@/components/ui/Furigana";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
@@ -79,6 +80,7 @@ type Phase = { kind: "intro" } | { kind: "item"; index: number } | { kind: "rewa
 function StageRunner({ library, stage, start, next }: Loaded) {
   const strictness = useSettings((s) => s.strictness);
   const autoplayAudio = useSettings((s) => s.autoplayAudio);
+  const speaking = useSpeakingEnabled() ?? false;
   // Resuming midway skips the explanation; a fresh (or repeated) stage shows it.
   const [phase, setPhase] = useState<Phase>(
     start > 0 ? { kind: "item", index: start } : { kind: "intro" },
@@ -129,6 +131,7 @@ function StageRunner({ library, stage, start, next }: Loaded) {
           index={phase.index}
           strictness={strictness}
           autoplayAudio={autoplayAudio}
+          speaking={speaking}
           returnTo={returnTo}
           onLearned={(p) => pending.current.push(p)}
           onNext={() =>
@@ -158,6 +161,7 @@ function StageItem({
   index,
   strictness,
   autoplayAudio,
+  speaking,
   returnTo,
   onLearned,
   onNext,
@@ -168,6 +172,7 @@ function StageItem({
   onLearned: (saving: Promise<unknown>) => void;
   strictness: ReturnType<typeof useSettings.getState>["strictness"];
   autoplayAudio: boolean;
+  speaking: boolean;
   returnTo: string;
   onNext: () => void;
 }) {
@@ -180,6 +185,8 @@ function StageItem({
       vocab={library.vocab}
       strictness={strictness}
       autoplayAudio={autoplayAudio}
+      speaking={speaking}
+      readingIndex={readingIndexOf(library)}
       returnTo={returnTo}
       onLearned={(grade) =>
         onLearned(

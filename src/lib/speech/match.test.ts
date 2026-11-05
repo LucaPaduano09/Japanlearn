@@ -5,7 +5,6 @@ import {
   kanjiNumber,
   matchSpoken,
   normalizeSpoken,
-  toHiragana,
 } from "./match";
 
 const word = (written: string, reading: string): StudyItem => ({
@@ -17,7 +16,6 @@ const word = (written: string, reading: string): StudyItem => ({
 
 describe("normalizeSpoken", () => {
   it("turns katakana into hiragana and keeps ー", () => {
-    expect(toHiragana("コーヒー")).toBe("こーひー");
     expect(normalizeSpoken("コーヒー")).toBe("こーひー");
   });
 
@@ -81,6 +79,33 @@ describe("matchSpoken", () => {
       ok: false,
       heard: "根っこ",
     });
+  });
+
+  it("hears a lone kana stretched, doubled, as romaji or as a one-sound word", () => {
+    const a: StudyItem = { deckId: "hiragana", id: "あ", chars: ["あ"], reading: "あ", romaji: "a" };
+    for (const heard of ["あ", "ああ", "あー", "アッ", "A"]) {
+      expect(matchSpoken(a, [heard]).ok, heard).toBe(true);
+    }
+    expect(matchSpoken(a, ["か"]).ok).toBe(false);
+    const me: StudyItem = { deckId: "hiragana", id: "め", chars: ["め"], reading: "め", romaji: "me" };
+    expect(matchSpoken(me, ["目"], buildReadingIndex([word("目", "め")])).ok).toBe(true);
+  });
+
+  it("takes kana that sound alike as the same", () => {
+    const di: StudyItem = {
+      deckId: "hiragana",
+      id: "ぢ",
+      chars: ["ぢ"],
+      reading: "ぢ",
+      romaji: "ji (from chi)",
+    };
+    expect(matchSpoken(di, ["じ"]).ok).toBe(true);
+    expect(matchSpoken(di, ["ji"]).ok).toBe(true);
+    expect(matchSpoken(word("ちぢむ", "ちぢむ"), ["ちじむ"]).ok).toBe(true);
+  });
+
+  it("doesn't squash repeated sounds in words", () => {
+    expect(matchSpoken(word("ここ", "ここ"), ["こ"]).ok).toBe(false);
   });
 
   it("rejects silence", () => {

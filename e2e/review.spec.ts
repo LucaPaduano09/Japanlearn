@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { recordSpeech, write } from "./helpers";
+import { fakeRecognizer, hear, recordSpeech, write } from "./helpers";
 
 const KANA = { あ: "a", い: "i", う: "u", え: "e", お: "o" } as const;
 type Kana = keyof typeof KANA;
@@ -11,6 +11,7 @@ test("finish the first stage, review it, and see due dates move", async ({ page 
   test.setTimeout(120_000);
   await page.clock.setFixedTime(T0);
   await recordSpeech(page);
+  await fakeRecognizer(page);
 
   // Welcome → first stage: the five vowels.
   await page.goto("/");
@@ -20,10 +21,26 @@ test("finish the first stage, review it, and see due dates move", async ({ page 
   await expect(page.getByText("They're read like in Italian")).toBeVisible();
   await page.getByRole("button", { name: "Start", exact: true }).click();
 
-  for (const char of Object.keys(KANA)) {
+  const kana = Object.keys(KANA);
+  for (const char of kana) {
     await expect(page.getByText("A new sound")).toBeVisible();
     await expect(page.getByText(char, { exact: true }).first()).toBeVisible();
-    await page.getByRole("button", { name: "See how to write it" }).click();
+    // Say it aloud: a miss on the first one, the last one skipped.
+    await page.getByRole("button", { name: "Try saying it" }).click();
+    await expect(page.getByText("Now you say it")).toBeVisible();
+    if (char === kana.at(-1)) {
+      await page.getByRole("button", { name: "Skip" }).click();
+    } else {
+      if (char === kana[0]) {
+        await hear(page, "か");
+        await page.getByRole("button", { name: "Speak", exact: true }).click();
+        await expect(page.getByText("I heard “か”.")).toBeVisible();
+      }
+      await hear(page, char);
+      await page.getByRole("button", { name: "Speak", exact: true }).click();
+      await expect(page.getByText("Correct")).toBeVisible();
+      await page.getByRole("button", { name: "See how to write it" }).click();
+    }
     await page.getByRole("button", { name: "Trace it" }).click();
     await write(page, char);
     await expect(page.getByText("Now from memory")).toBeVisible();
@@ -39,27 +56,37 @@ test("finish the first stage, review it, and see due dates move", async ({ page 
   await expect(page.getByText("Stage 2 · Now")).toBeVisible();
   await expect(page.getByText("K row")).toBeVisible();
 
-  // Nothing to review yet; 11 minutes later all 15 cards are due.
+  // Nothing to review yet; 11 minutes later all 20 cards are due.
   await expect(page.getByText(/to review/)).toHaveCount(0);
   await page.clock.setFixedTime(new Date(T0.getTime() + 11 * 60_000));
   await page.reload();
-  await expect(page.getByText("15 to review")).toBeVisible();
-  await page.getByRole("link", { name: /15 to review/ }).click();
+  await expect(page.getByText("20 to review")).toBeVisible();
+  await page.getByRole("link", { name: /20 to review/ }).click();
 
   const seen = new Set<string>();
-  for (let n = 0; n < 15; n++) {
-    await expect(page.getByText(`${n + 1} / 15`)).toBeVisible();
+  for (let n = 0; n < 20; n++) {
+    await expect(page.getByText(`${n + 1} / 20`)).toBeVisible();
     // Wait for the card itself before checking which kind it is.
     await expect(
       page
         .getByText("How is this read?")
         .or(page.getByText("Write what you hear"))
-        .or(page.getByText("Write the hiragana for")),
+        .or(page.getByText("Write the hiragana for"))
+        .or(page.getByText("Read it aloud")),
     ).toBeVisible();
     if (await page.getByText("How is this read?").isVisible()) {
       seen.add("recognize");
       const char = (await page.locator("p.font-hand").first().textContent()) as Kana;
       await page.getByRole("button", { name: KANA[char], exact: true }).click();
+      continue;
+    }
+    if (await page.getByText("Read it aloud").isVisible()) {
+      seen.add("speak");
+      const char = (await page.locator("p.font-hand").first().textContent())!;
+      await hear(page, char);
+      await page.getByRole("button", { name: "Speak", exact: true }).click();
+      await expect(page.getByText(/Next review: in \d+ days?/)).toBeVisible();
+      await page.getByRole("button", { name: "Continue" }).click();
       continue;
     }
     let char: string;
@@ -78,10 +105,10 @@ test("finish the first stage, review it, and see due dates move", async ({ page 
     await expect(page.getByText(/Next review: in \d+ days?/)).toBeVisible();
     await page.getByRole("button", { name: "Continue" }).click();
   }
-  expect([...seen].sort()).toEqual(["audio", "recognize", "write"]);
+  expect([...seen].sort()).toEqual(["audio", "recognize", "speak", "write"]);
 
   await expect(page.getByRole("heading", { name: "Session complete" })).toBeVisible();
-  await expect(page.getByText("15 reviewed")).toBeVisible();
+  await expect(page.getByText("20 reviewed")).toBeVisible();
   await page.getByRole("link", { name: "Back to the path" }).click();
   await expect(page.getByText(/to review/)).toHaveCount(0);
   await expect(page.getByText("1-day streak")).toBeVisible();

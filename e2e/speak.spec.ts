@@ -1,38 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { recordSpeech } from "./helpers";
+import { fakeRecognizer, hear, recordSpeech } from "./helpers";
 
 const T0 = new Date("2026-11-04T09:00:00");
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
-
-/**
- * A fake Web Speech recognizer: each start() "hears" window.nextHeard,
- * as one result with those alternatives, then ends.
- */
-async function fakeRecognizer(page: Page) {
-  await page.addInitScript(() => {
-    const w = window as unknown as Record<string, unknown> & { nextHeard: string[] };
-    w.nextHeard = [];
-    class FakeRecognition {
-      lang = "";
-      interimResults = false;
-      maxAlternatives = 1;
-      continuous = false;
-      onresult: ((e: unknown) => void) | null = null;
-      onerror: ((e: unknown) => void) | null = null;
-      onend: (() => void) | null = null;
-      start() {
-        setTimeout(() => {
-          const alternatives = w.nextHeard.map((transcript) => ({ transcript }));
-          if (alternatives.length) this.onresult?.({ results: [alternatives] });
-          this.onend?.();
-        }, 50);
-      }
-      stop() {}
-    }
-    w.SpeechRecognition = FakeRecognition;
-  });
-}
 
 /** 猫, learned two days ago: only its speaking card is due. */
 async function seedCat(page: Page) {
@@ -79,9 +50,6 @@ async function seedCat(page: Page) {
     { now: T0.getTime(), hour: HOUR, day: DAY },
   );
 }
-
-const hear = (page: Page, ...heard: string[]) =>
-  page.evaluate((h) => ((window as unknown as { nextHeard: string[] }).nextHeard = h), heard);
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(T0);

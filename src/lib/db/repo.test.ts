@@ -1,7 +1,9 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { StudyItem } from "@/lib/srs/decks";
 import {
   activityTimes,
+  addMissingCards,
   allCards,
   allItems,
   countDue,
@@ -68,6 +70,46 @@ describe("reviewCard", () => {
     expect(await countDue(later)).toBe(1);
     expect(await nextDue()).toBe(later);
     expect((await activityTimes()).sort()).toEqual([NOW, later]);
+  });
+});
+
+describe("addMissingCards", () => {
+  const word: StudyItem = { deckId: "vocab-n5", id: "ねこ", chars: ["ね", "こ"], reading: "ねこ" };
+  const library = { items: new Map([["vocab-n5|ねこ", word]]) };
+
+  it("adds the card types an item learned earlier doesn't have yet, due now", async () => {
+    await introduceItem("vocab-n5", "ねこ", ["recognize"], "good", NOW);
+    const later = NOW + 60 * MIN;
+    expect(await addMissingCards(library, later)).toBe(3);
+    const cards = await allCards();
+    expect(cards.map((c) => c.type).sort()).toEqual([
+      "recognize",
+      "speak",
+      "write-from-audio",
+      "write-from-meaning",
+    ]);
+    const speak = cards.find((c) => c.type === "speak")!;
+    expect(speak).toMatchObject({ due: later, reps: 0 });
+    // The existing card keeps its schedule, and a second run adds nothing.
+    expect(cards.find((c) => c.type === "recognize")!.due).toBe(NOW + 10 * MIN);
+    expect(await addMissingCards(library, later)).toBe(0);
+  });
+
+  it("skips items the content no longer has", async () => {
+    await introduceItem("vocab-n5", "いぬ", ["recognize"], "good", NOW);
+    expect(await addMissingCards(library, NOW)).toBe(0);
+  });
+});
+
+describe("skipped card types", () => {
+  it("aren't counted as due nor as next due", async () => {
+    await introduceItem("vocab-n5", "ねこ", ["speak"], "good", NOW);
+    await introduceItem("vocab-n5", "いぬ", ["recognize"], "good", NOW + MIN);
+    const later = NOW + 60 * MIN;
+    expect(await countDue(later)).toBe(2);
+    expect(await countDue(later, ["speak"])).toBe(1);
+    expect(await nextDue()).toBe(NOW + 10 * MIN);
+    expect(await nextDue(["speak"])).toBe(NOW + 11 * MIN);
   });
 });
 

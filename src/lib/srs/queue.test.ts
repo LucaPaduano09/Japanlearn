@@ -45,6 +45,12 @@ describe("planReviews", () => {
     expect(planReviews({ cards, limits: DEFAULT_LIMITS, now: NOW }).map((c) => c.itemId)).toEqual(["う", "あ"]);
     expect(planReviews({ cards, limits: { reviews: 1 }, now: NOW }).map((c) => c.itemId)).toEqual(["う"]);
   });
+
+  it("leaves out card types the device can't do", () => {
+    const cards = [card("あ", NOW - DAY, "speak"), card("い", NOW - HOUR)];
+    const plan = planReviews({ cards, limits: { reviews: 1 }, now: NOW, skip: ["speak"] });
+    expect(plan.map((c) => c.itemId)).toEqual(["い"]);
+  });
 });
 
 describe("spreadSiblings", () => {

@@ -19,19 +19,22 @@ export const DEFAULT_LIMITS: SessionLimits = { reviews: 20 };
 /**
  * The due cards for one review session, oldest first, siblings of one item
  * kept apart. New items come from the path's stages, not from here.
+ * `skip`: card types this device can't do (they wait, still due).
  */
 export function planReviews({
   cards,
   limits,
   now,
+  skip = [],
 }: {
   cards: CardRecord[];
   limits: SessionLimits;
   now: number;
+  skip?: CardType[];
 }): CardRecord[] {
   return spreadSiblings(
     cards
-      .filter((c) => c.due <= now)
+      .filter((c) => c.due <= now && !skip.includes(c.type))
       .sort((a, b) => a.due - b.due)
       .slice(0, limits.reviews),
   );

@@ -4,11 +4,20 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ListenCard } from "@/components/cards/ListenCard";
 import { RecognizeCard } from "@/components/cards/RecognizeCard";
+import { SpeakCard } from "@/components/cards/SpeakCard";
 import { WriteCard } from "@/components/cards/WriteCard";
 import { PrimaryButton } from "@/components/ui/Button";
 import { loadLibrary, type Library } from "@/lib/content/library";
-import { allCards, countDue, nextDue, reviewCard } from "@/lib/db/repo";
-import { itemKey, recognizeAnswer, type StudyItem } from "@/lib/srs/decks";
+import { addMissingCards, allCards, countDue, nextDue, reviewCard } from "@/lib/db/repo";
+import { skippedCardTypes } from "@/lib/native/stt";
+import { buildReadingIndex } from "@/lib/speech/match";
+import {
+  itemKey,
+  recognizeAnswer,
+  SPOKEN_CARD_TYPES,
+  type CardType,
+  type StudyItem,
+} from "@/lib/srs/decks";
 import { formatDue } from "@/lib/srs/format";
 import {
   pickChoices,
@@ -54,6 +63,8 @@ export function ReviewSession() {
     now: number;
   } | null>(null);
   const startedAt = useRef(0);
+  /** Card types left out: those the device can't do, or put off this session. */
+  const [skip, setSkip] = useState<CardType[]>([]);
 
   useEffect(() => {
     loadLibrary().then(setLibrary);
@@ -63,10 +74,20 @@ export function ReviewSession() {
   useEffect(() => {
     if (!library || !settings.loaded) return;
     let cancelled = false;
-    allCards().then((cards) => {
+    Promise.all([
+      addMissingCards(library).then(allCards),
+      skippedCardTypes(settings.speakingPractice),
+    ]).then(([cards, unavailable]) => {
       if (cancelled) return;
       const now = Date.now();
-      const next: Step[] = planReviews({ cards, limits: settings.limits, now }).flatMap(
+      const skipped = [...new Set([...unavailable, ...skip])];
+      setSkip(skipped);
+      const next: Step[] = planReviews({
+        cards,
+        limits: settings.limits,
+        now,
+        skip: skipped,
+      }).flatMap(
         (card) => {
           const item = library.items.get(itemKey(card.deckId, card.itemId));
           return item ? [{ card, item }] : [];
@@ -91,13 +112,13 @@ export function ReviewSession() {
     if (!finished) return;
     let cancelled = false;
     const now = Date.now();
-    Promise.all([countDue(now), nextDue()]).then(([dueNow, next]) => {
+    Promise.all([countDue(now, skip), nextDue(skip)]).then(([dueNow, next]) => {
       if (!cancelled) setAfter({ dueNow, next, now });
     });
     return () => {
       cancelled = true;
     };
-  }, [finished]);
+  }, [finished, skip]);
 
   const advance = useCallback(() => {
     startedAt.current = Date.now();
@@ -127,6 +148,27 @@ export function ReviewSession() {
 
   const step = steps?.[pos];
 
+  const readingIndex = useMemo(
+    () =>
+      buildReadingIndex(
+        library ? [...library.decks["vocab-n5"], ...library.decks["vocab-n4"]] : [],
+      ),
+    [library],
+  );
+
+  /** "Can't speak now": the rest of the session (and "keep going") goes without them. */
+  const skipSpoken = () => {
+    setSkip((s) => [...new Set([...s, ...SPOKEN_CARD_TYPES])]);
+    setSteps(
+      (s) =>
+        s && [
+          ...s.slice(0, pos),
+          ...s.slice(pos).filter((x) => !SPOKEN_CARD_TYPES.includes(x.card.type)),
+        ],
+    );
+    startedAt.current = Date.now();
+  };
+
   const choices = useMemo(() => {
     if (!library || !step || step.card.type !== "recognize") return [];
     const pool = library.decks[step.item.deckId].map(recognizeAnswer);
@@ -140,7 +182,7 @@ export function ReviewSession() {
 
   if (!library || !steps) return null;
 
-  if (steps.length === 0) return <CaughtUp />;
+  if (steps.length === 0) return <CaughtUp skip={skip} />;
 
   if (finished) {
     return (
@@ -191,6 +233,15 @@ export function ReviewSession() {
           onAnswer={(correct) =>
             answer(step!.card, step!.item, correct ? "good" : "again", correct ? 0 : 1, false)
           }
+        />
+      ) : step!.card.type === "speak" ? (
+        <SpeakCard
+          key={`card-${pos}`}
+          item={step!.item}
+          index={readingIndex}
+          autoplayAudio={settings.autoplayAudio}
+          onAnswer={(grade, mistakes) => answer(step!.card, step!.item, grade, mistakes, true)}
+          onSkip={skipSpoken}
         />
       ) : step!.card.type === "write-from-audio" ? (
         <ListenCard
@@ -243,11 +294,11 @@ function CardResult({
   );
 }
 
-function CaughtUp() {
+function CaughtUp({ skip }: { skip: CardType[] }) {
   const [next, setNext] = useState<{ due: number; now: number } | null>(null);
   useEffect(() => {
-    nextDue().then((due) => due && setNext({ due, now: Date.now() }));
-  }, []);
+    nextDue(skip).then((due) => due && setNext({ due, now: Date.now() }));
+  }, [skip]);
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 px-4 py-8 text-center">
       <p className="font-hand text-7xl">済</p>

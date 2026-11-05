@@ -15,6 +15,8 @@ export interface Settings {
   theme: Theme;
   /** Speak kana and words aloud when they're shown. */
   autoplayAudio: boolean;
+  /** Words also come up as cards to read aloud (where the device can listen). */
+  speakingPractice: boolean;
   limits: SessionLimits;
   /** The "How Japanese works" welcome was finished or skipped. */
   welcomeSeen: boolean;
@@ -26,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   handedness: "right",
   theme: "system",
   autoplayAudio: true,
+  speakingPractice: true,
   limits: DEFAULT_LIMITS,
   welcomeSeen: false,
 };
@@ -67,6 +70,7 @@ export function pickSettings(s: Settings): Settings {
     handedness: s.handedness,
     theme: s.theme,
     autoplayAudio: s.autoplayAudio,
+    speakingPractice: s.speakingPractice,
     limits: s.limits,
     welcomeSeen: s.welcomeSeen,
   };

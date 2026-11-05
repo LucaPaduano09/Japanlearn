@@ -15,9 +15,11 @@
     "test": "vitest",
     "e2e": "playwright test",
     "data:build": "tsx scripts/build-data.ts",
-    "icons:build": "tsx scripts/make-icons.ts"
+    "icons:build": "tsx scripts/make-icons.ts",
+    "postinstall": "patch-package"
   },
   "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.6.0",
     "@capacitor/core": "^8.6.0",
@@ -49,6 +51,7 @@
     "eslint-config-next": "16.4.5",
     "fake-indexeddb": "^6.2.7",
     "jsdom": "^29.1.1",
+    "patch-package": "^8.0.1",
     "prettier": "^3.9.10",
     "serve": "^14.2.6",
     "svg-path-properties": "^2.2.0",

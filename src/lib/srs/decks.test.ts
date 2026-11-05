@@ -94,6 +94,13 @@ describe("cardTypesFor", () => {
     expect(cardTypesFor(withKanji)).toContain("write-from-reading");
     expect(cardTypesFor(kanaOnly)).toContain("write-from-audio");
   });
+
+  it("has words, and only words, read aloud", () => {
+    expect(cardTypesFor(decks["vocab-n5"][0])).toContain("speak");
+    expect(cardTypesFor(decks["vocab-n4"][0])).toContain("speak");
+    expect(cardTypesFor(decks.hiragana[0])).not.toContain("speak");
+    expect(cardTypesFor(decks["kanji-n5"][0])).not.toContain("speak");
+  });
 });
 
 describe("ids and answers", () => {

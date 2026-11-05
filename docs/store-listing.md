@@ -65,7 +65,10 @@ First release: hiragana, katakana, N5 kanji and vocabulary with handwriting prac
 
 App Store "App Privacy": **Data Not Collected**. Google Play "Data safety": no
 data collected or shared; data is not encrypted in transit because none is
-sent.
+sent. **To review:** speaking cards use the system speech recognizer (Apple
+Speech / Google), which may send the recording to Apple or Google to transcribe
+it. The app itself sends nothing, but both stores' questionnaires and the
+policy below should mention it.
 
 Privacy policy text to host:
 
@@ -73,6 +76,10 @@ Privacy policy text to host:
 > study progress and settings are saved only on your device. A backup file is
 > created only when you choose "Export backup", and you decide where it goes.
 > The app needs no account and makes no network requests while you use it.
+> When you answer a speaking card, the microphone recording is turned into text
+> by your device's speech recognition service (Apple or Google), which may
+> process it on their servers under their privacy policies; Kakitai doesn't keep
+> or send the recording.
 
 ## Screenshots
 

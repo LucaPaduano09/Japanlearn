@@ -45,6 +45,15 @@ updating over the previous release.
 - [ ] Settings shows "Japanese voice available"; without a Japanese voice it explains how to install one.
 - [ ] Muted / silent switch behaves as expected for the platform.
 
+## Speaking
+
+- [ ] First "Read it aloud" card asks for the microphone (and, on iOS, speech recognition) once; denying shows the "allow the microphone" message and "Can't speak now" still moves on.
+- [ ] Saying the word (kana-only and with kanji) is accepted; a different word shows "I heard …" and the tries left; three misses count as wrong.
+- [ ] Listening stops by itself about 1.5 s after you finish, and when tapping the microphone again.
+- [ ] After answering aloud, the reading is still spoken (TTS plays through the speaker, not the earpiece, on iOS).
+- [ ] "Can't speak now" removes the remaining speaking cards from the session; turning off "Speaking practice" hides them from the due count.
+- [ ] A device without Japanese recognition: Settings explains it and no speaking cards appear.
+
 ## Settings, backup, credits
 
 - [ ] Theme System / Light / Dark switches immediately, persists after a restart, and the ink color follows it.

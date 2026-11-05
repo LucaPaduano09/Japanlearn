@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/backup";
 import { activityTimes, allItems } from "@/lib/db/repo";
 import { saveTextFile } from "@/lib/native/files";
+import { canRecognizeJapanese } from "@/lib/native/stt";
 import { hasJapaneseVoice, speak } from "@/lib/native/tts";
 import { streak, type SessionLimits } from "@/lib/srs/queue";
 import { STRICTNESS_SCALE, type Strictness } from "@/lib/strokes/compare";
@@ -89,6 +90,13 @@ export function SettingsScreen() {
           onChange={(autoplayAudio) => s.update({ autoplayAudio })}
         />
         <VoiceStatus />
+        <Toggle
+          label={t.speaking}
+          hint={t.speakingHint}
+          checked={s.speakingPractice}
+          onChange={(speakingPractice) => s.update({ speakingPractice })}
+        />
+        <SpeechStatus />
       </Section>
 
       <Section title={t.limits}>
@@ -331,6 +339,16 @@ function VoiceStatus() {
       </button>
     </div>
   );
+}
+
+/** Only says something when speaking cards can't work here. */
+function SpeechStatus() {
+  const [available, setAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    canRecognizeJapanese().then(setAvailable);
+  }, []);
+  if (available !== false) return null;
+  return <p className="text-sm text-muted">{strings.settings.speechMissing}</p>;
 }
 
 type BackupState =

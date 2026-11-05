@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { loadLibrary, type Library } from "@/lib/content/library";
-import { activityTimes, allItems, countDue } from "@/lib/db/repo";
+import { activityTimes, addMissingCards, allItems, countDue } from "@/lib/db/repo";
+import { skippedCardTypes } from "@/lib/native/stt";
 import {
   pathProgress,
   SECTIONS,
@@ -32,12 +33,17 @@ interface Data {
 export function PathScreen() {
   const router = useRouter();
   const welcomeSeen = useSettings((s) => s.welcomeSeen);
+  const speakingPractice = useSettings((s) => s.speakingPractice);
   const [data, setData] = useState<Data | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const now = Date.now();
-    Promise.all([loadLibrary(), allItems(), countDue(now), activityTimes()]).then(
+    // New card types reach items learned before them, then get counted.
+    const due = Promise.all([loadLibrary(), skippedCardTypes(speakingPractice)]).then(
+      ([library, skip]) => addMissingCards(library, now).then(() => countDue(now, skip)),
+    );
+    Promise.all([loadLibrary(), allItems(), due, activityTimes()]).then(
       ([library, items, due, times]) => {
         if (cancelled) return;
         // First run: how Japanese works, before anything else.
@@ -56,7 +62,7 @@ export function PathScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router, welcomeSeen]);
+  }, [router, welcomeSeen, speakingPractice]);
 
   if (!data) return null;
   const t = strings.path;

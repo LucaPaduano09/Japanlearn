@@ -28,7 +28,11 @@ export type CardType =
   | "write-from-meaning"
   | "write-from-reading"
   | "write-from-audio"
-  | "recognize";
+  | "recognize"
+  | "speak";
+
+/** Cards answered aloud: only shown where the device can recognize Japanese. */
+export const SPOKEN_CARD_TYPES: CardType[] = ["speak"];
 
 /** One thing to learn. Every item becomes a few cards, one per card type. */
 export interface StudyItem {
@@ -189,10 +193,13 @@ export function cardTypesFor(item: StudyItem): CardType[] {
     case "vocab-n4":
       // A word with kanji can't be written from sound alone (homophones),
       // so it is prompted with its kana instead.
+      // Words are also read aloud; single kana and kanji aren't, since
+      // recognizers turn a lone sound into whatever word it might be.
       return [
         "write-from-meaning",
         hasKanji(item) ? "write-from-reading" : "write-from-audio",
         "recognize",
+        "speak",
       ];
   }
 }

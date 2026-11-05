@@ -1,6 +1,8 @@
+import type { Library } from "@/lib/content/library";
 import type { CharacterGrade } from "@/lib/strokes/compare";
 import {
   cardId,
+  cardTypesFor,
   itemKey,
   type CardType,
   type DeckId,
@@ -45,6 +47,41 @@ export async function introduceItem(
   });
 }
 
+/**
+ * Gives learned items the cards of card types added since they were learned
+ * (e.g. reading words aloud). The new cards are fresh and due now. Returns
+ * how many were added.
+ */
+export async function addMissingCards(
+  library: Pick<Library, "items">,
+  now = Date.now(),
+): Promise<number> {
+  const db = getDb();
+  const [items, ids] = await Promise.all([
+    db.items.toArray(),
+    db.cards.toCollection().primaryKeys(),
+  ]);
+  const have = new Set(ids);
+  const cards: CardRecord[] = [];
+  for (const { id, deckId, itemId } of items) {
+    const item = library.items.get(id);
+    if (!item) continue;
+    for (const type of cardTypesFor(item)) {
+      const cid = cardId(deckId, itemId, type);
+      if (have.has(cid)) continue;
+      cards.push({ id: cid, deckId, itemId, type, ...(await newSrs(cid, now)) });
+    }
+  }
+  if (cards.length === 0) return 0;
+  // Two screens may run this at once: only add what is still missing.
+  return db.transaction("rw", db.cards, async () => {
+    const found = await db.cards.bulkGet(cards.map((c) => c.id));
+    const missing = cards.filter((_, i) => !found[i]);
+    await db.cards.bulkAdd(missing);
+    return missing.length;
+  });
+}
+
 /** Applies a review to a card, logs it, and returns the rescheduled card. */
 export async function reviewCard(
   card: CardRecord,
@@ -76,13 +113,21 @@ export function allItems(): Promise<ItemRecord[]> {
   return getDb().items.toArray();
 }
 
-export function countDue(now = Date.now()): Promise<number> {
-  return getDb().cards.where("due").belowOrEqual(now).count();
+/** `skip`: card types this device can't do, as in planReviews(). */
+export function countDue(now = Date.now(), skip: CardType[] = []): Promise<number> {
+  return getDb()
+    .cards.where("due")
+    .belowOrEqual(now)
+    .filter((c) => !skip.includes(c.type))
+    .count();
 }
 
 /** Earliest upcoming due date, or null when there are no cards. */
-export async function nextDue(): Promise<number | null> {
-  const first = await getDb().cards.orderBy("due").first();
+export async function nextDue(skip: CardType[] = []): Promise<number | null> {
+  const first = await getDb()
+    .cards.orderBy("due")
+    .filter((c) => !skip.includes(c.type))
+    .first();
   return first?.due ?? null;
 }
 

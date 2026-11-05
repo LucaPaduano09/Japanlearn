@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { Furigana } from "@/components/ui/Furigana";
 import { teachableMeanings } from "@/lib/content/readings";
 import { toRomaji } from "@/lib/content/romaji";
 import type { KanjiEntry, VocabEntry } from "@/lib/content/types";
@@ -265,31 +266,13 @@ export function WordRow({
       >
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-xl">
-              {kind && at >= 0 ? (
-                <>
-                  {expression.slice(0, at)}
-                  <mark className={`rounded px-0.5 ${mark}`}>{char}</mark>
-                  {expression.slice(at + 1)}
-                </>
-              ) : (
-                expression
-              )}
-            </span>
-            <span className="text-sm whitespace-nowrap text-muted">
-              {kind && span ? (
-                <>
-                  {kana.slice(0, span[0])}
-                  <mark className={`rounded px-0.5 font-semibold ${mark}`}>
-                    {kana.slice(span[0], span[1])}
-                  </mark>
-                  {kana.slice(span[1])}
-                </>
-              ) : (
-                kana
-              )}{" "}
-              · <span className="italic">{toRomaji(kana)}</span>
-            </span>
+            <Furigana
+              expression={expression}
+              reading={kana}
+              highlight={kind && at >= 0 ? { index: at, span, className: mark } : undefined}
+              className="text-xl"
+            />
+            <span className="text-sm whitespace-nowrap text-muted italic">{toRomaji(kana)}</span>
           </span>
           <span className="block text-sm">{match.word.meaning}</span>
         </span>

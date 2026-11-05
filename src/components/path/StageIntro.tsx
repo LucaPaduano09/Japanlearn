@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Furigana } from "@/components/ui/Furigana";
 import { PrimaryButton } from "@/components/ui/Button";
 import { speak } from "@/lib/native/tts";
 import type { Library } from "@/lib/content/library";
@@ -116,6 +117,18 @@ export function StageIntro({
             />
           )}
           {intro.first && (
+            <Panel title={t.furiganaTitle} text={t.furiganaBody}>
+              <div className="flex items-center gap-5 rounded-2xl border border-border bg-surface p-4">
+                <Furigana expression="毎日" reading="まいにち" className="font-hand shrink-0 text-6xl" />
+                <ul className="flex flex-col gap-4 text-sm font-medium">
+                  <li>↑ {t.furiganaTop}</li>
+                  <li>↓ {t.furiganaBottom}</li>
+                </ul>
+              </div>
+              <p className="text-sm text-muted">{t.furiganaNote}</p>
+            </Panel>
+          )}
+          {intro.first && (
             <Panel title={t.kanjiTitle} text={t.kanjiBody}>
               <Link
                 href={`/learn/intro/?from=${encodeURIComponent(returnTo)}`}
@@ -147,12 +160,7 @@ export function StageIntro({
           <ItemList
             items={stage.items.map((id) => {
               const item = library.items.get(itemKey(stage.deckId, id));
-              return {
-                text: id,
-                sub: [item && item.reading !== id ? item.reading : null, item?.meaning]
-                  .filter(Boolean)
-                  .join(" · "),
-              };
+              return { text: id, reading: item?.reading, sub: item?.meaning ?? "" };
             })}
           />
         </Panel>
@@ -225,14 +233,22 @@ function Pairs({ pairs }: { pairs: [string, string][] }) {
   );
 }
 
-function ItemList({ items }: { items: { text: string; sub: string }[] }) {
+function ItemList({ items }: { items: { text: string; reading?: string; sub: string }[] }) {
   return (
     <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">
       {items.map((i) => (
         <li key={i.text} className="flex items-center gap-4 px-4 py-2.5">
-          <span lang="ja" className="font-hand shrink-0 text-3xl">
-            {i.text}
-          </span>
+          {i.reading ? (
+            <Furigana
+              expression={i.text}
+              reading={i.reading}
+              className="font-hand inline-block min-w-16 shrink-0 text-3xl"
+            />
+          ) : (
+            <span lang="ja" className="font-hand shrink-0 text-3xl">
+              {i.text}
+            </span>
+          )}
           <span className="min-w-0 text-sm text-muted">{i.sub}</span>
         </li>
       ))}

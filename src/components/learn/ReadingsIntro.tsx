@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { KIND_STYLE, WordRow } from "@/components/learn/KanjiMeet";
+import { Furigana } from "@/components/ui/Furigana";
 import { loadAllKanji } from "@/lib/content/loader";
 import type { KanjiEntry } from "@/lib/content/types";
 import { matchWord, type ReadingKind } from "@/lib/content/wordReadings";
@@ -111,7 +112,7 @@ export function ReadingsIntro() {
           <>
             <Title>{t.slides.what.title}</Title>
             <div className="flex items-center justify-center gap-5 py-4">
-              <span className="font-hand text-9xl leading-none">山</span>
+              <Furigana expression="山" reading="やま" className="font-hand text-9xl leading-tight" />
               <span className="text-2xl text-muted">
                 {t.slides.what.example}
               </span>

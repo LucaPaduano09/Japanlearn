@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ItemIntro } from "@/components/cards/ItemIntro";
 import { SpeakerIcon } from "@/components/cards/ListenCard";
+import { Furigana } from "@/components/ui/Furigana";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
 import { loadLibrary, type Library } from "@/lib/content/library";
 import { allItems, introduceItem } from "@/lib/db/repo";
@@ -236,11 +237,12 @@ function StageReward({
                   <SpeakerIcon />
                 </button>
                 <span className="min-w-0">
-                  <span lang="ja" className="font-hand block text-3xl">
-                    {r.word}
-                  </span>
+                  <Furigana
+                    expression={r.word}
+                    reading={r.reading ?? r.word}
+                    className="font-hand block text-3xl"
+                  />
                   <span className="block text-sm text-muted">
-                    {r.reading ? `${r.reading} · ` : ""}
                     {toRomaji(toHiragana(r.reading ?? r.word))} · {rewardMeaning(r, locale)}
                   </span>
                 </span>

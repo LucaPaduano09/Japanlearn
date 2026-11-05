@@ -16,5 +16,6 @@ Spec and milestones: `BOOTSTRAP.md`.
 - Settings live in the Dexie `settings` table via src/store/settings.ts; `update()` is ignored until `load()` finished. AppShell (layout) loads them, applies the theme and hides the splash.
 - Icons/splash: edit scripts/make-icons.ts, then `npm run icons:build` and `npx capacitor-assets generate` (colors in docs/store-listing.md). Store copy and the device checklist are in docs/.
 - Speaking: vocab items have a `speak` card (read the word aloud). Recognition in src/lib/native/stt.ts (plugin in the app, Web Speech API in browsers); matching in src/lib/speech/match.ts (pure, tested). Card types the device can't do are passed as `skip` to planReviews/countDue/nextDue; `addMissingCards` gives already-learned items cards of newly added types. The plugin ships no Package.swift: `patches/` adds one (patch-package, run on postinstall) — keep it when upgrading the plugin.
+- Words with kanji show their reading as furigana (`<Furigana>` in src/components/ui, split per kanji by `furigana()` in src/lib/content/furigana.ts, pure + tested); don't put the kana reading beside the word.
 - Run `npm test` and `npm run build` before saying a task is done (`npm run e2e` for flows).
 - Keep KanjiVG/EDRDG attribution intact.

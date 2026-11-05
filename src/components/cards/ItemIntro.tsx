@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { Prompt, writePrompt } from "@/components/cards/Prompt";
 import { SpeakerIcon } from "@/components/cards/ListenCard";
 import { KanjiSimpleMeet } from "@/components/cards/KanjiSimpleMeet";
+import { Furigana } from "@/components/ui/Furigana";
 import { PrimaryButton } from "@/components/ui/Button";
 import { useStrokes } from "@/components/writing/useStrokes";
 import { WatchStep } from "@/components/writing/WatchStep";
 import { WordWriter } from "@/components/writing/WordWriter";
+import { toHiragana, toRomaji } from "@/lib/content/romaji";
 import type { KanjiEntry, VocabEntry } from "@/lib/content/types";
 import { speak } from "@/lib/native/tts";
 import { isKanjiDeck, isVocabDeck, type StudyItem } from "@/lib/srs/decks";
@@ -152,16 +154,23 @@ function MeetCard({
       <p className="text-sm text-muted">
         {isKana ? strings.newItem.meetKana : strings.newItem.meetWord}
       </p>
-      <p className="font-hand text-9xl leading-none break-all">
-        {item.chars.join("")}
-      </p>
       {isKana ? (
-        <p className="text-3xl font-semibold">{item.romaji}</p>
+        <>
+          <p className="font-hand text-9xl leading-none break-all">{item.chars.join("")}</p>
+          <p className="text-3xl font-semibold">{item.romaji}</p>
+        </>
       ) : (
-        <div>
-          <p className="font-hand text-3xl">{item.reading}</p>
-          <p className="mt-1 text-lg">{item.meaning}</p>
-        </div>
+        <>
+          <Furigana
+            expression={item.chars.join("")}
+            reading={item.reading}
+            className="font-hand text-8xl break-all"
+          />
+          <div>
+            <p className="text-lg text-muted">{toRomaji(toHiragana(item.reading))}</p>
+            <p className="mt-1 text-lg">{item.meaning}</p>
+          </div>
+        </>
       )}
       <button
         type="button"

@@ -68,6 +68,12 @@ export const en = {
       kanjiBody: "Each kanji is an idea, not a sound. Most have more than one reading.",
       kanjiReadings: "How kanji are read · 2 min",
       kanjiMeet: "In this stage:",
+      furiganaTitle: "How to read words",
+      furiganaBody:
+        "A kanji doesn't tell you how it sounds. So above each kanji you'll find its reading in small hiragana (called furigana).",
+      furiganaTop: "On top, small: how it's read",
+      furiganaBottom: "Below, large: how it's written",
+      furiganaNote: "毎 is read まい, 日 is read にち: together まいにち (mainichi), “every day”.",
       levelTitle: (level: string) => `Level ${level.toUpperCase()}`,
       levelBody: (n: number) =>
         `${n} new kanji for everyday life: family, seasons, town, work and study. Same steps as before.`,
@@ -286,6 +292,7 @@ export const en = {
         body: [
           "Kanji came to Japan from China about 1,500 years ago. Japan kept the characters and used them to write Japanese words.",
           "So one kanji has a meaning, like 山 = mountain, and one or more ways to be read aloud.",
+          "The reading is written in hiragana, small above the kanji: 山 is read やま (yama).",
         ],
       },
       kinds: {

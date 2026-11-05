@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SpeakerIcon } from "@/components/cards/ListenCard";
+import { Furigana } from "@/components/ui/Furigana";
 import { KanjiMeet } from "@/components/learn/KanjiMeet";
 import { teachableMeanings } from "@/lib/content/readings";
 import type { KanjiEntry, VocabEntry } from "@/lib/content/types";
@@ -58,16 +59,13 @@ export function KanjiSimpleMeet({
           </button>
           <div className="min-w-0">
             <p className="text-xs text-muted">{t.example}</p>
-            <p lang="ja" className="font-hand text-2xl">
-              {[...example.written].map((c, i) => (
-                <span key={i} className={c === kanji.char ? "text-accent" : undefined}>
-                  {c}
-                </span>
-              ))}
-            </p>
-            <p className="text-sm text-muted">
-              {example.w.reading.split(";")[0]} · {example.w.meaning}
-            </p>
+            <Furigana
+              expression={example.written}
+              reading={example.w.reading}
+              highlight={{ index: example.written.indexOf(kanji.char), span: null, className: "text-accent" }}
+              className="font-hand block text-2xl"
+            />
+            <p className="text-sm text-muted">{example.w.meaning}</p>
           </div>
         </div>
       )}

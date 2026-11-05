@@ -45,6 +45,9 @@ test("each kana row explains consonant + vowel and its exceptions", async ({ pag
 test("the first kanji stage: readings stay folded until asked, strokes are graded", async ({ page }) => {
   await learnAllKana(page);
   await page.goto("/");
+  // N5 then N4: each level's kanji lessons with their words.
+  await expect(page.getByRole("heading", { name: /N5 · Kanji & words/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /N4 · Kanji & words/ })).toBeVisible();
   await expect(page.getByText("Numbers 1/3")).toBeVisible();
   await page.getByRole("link", { name: "Start" }).click();
 

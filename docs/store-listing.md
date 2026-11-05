@@ -21,7 +21,7 @@ need a decision or a URL before submitting.
 
 ## Short description (Google Play, 80 chars)
 
-Learn hiragana, katakana and kanji by writing them, with instant stroke feedback.
+Learn hiragana, katakana and 284 kanji (JLPT N5–N4) by writing them by hand.
 
 ## Promotional text (iOS, 170 chars)
 
@@ -37,7 +37,7 @@ WRITE, DON'T JUST TAP
 • Wrong direction or wrong order? You see the correct stroke right away.
 
 LEARN STEP BY STEP
-• Hiragana, katakana, the JLPT N5 kanji and about 700 N5 words.
+• Hiragana, katakana, all 284 JLPT N5 and N4 kanji and about 1,300 words.
 • Every new character starts with its stroke-order animation, then tracing, then writing from memory.
 • One guided path: hiragana row by row, then katakana, kanji and words. Every stage explains its row and leaves you real words to read.
 

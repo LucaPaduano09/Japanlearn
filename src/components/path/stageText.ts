@@ -29,5 +29,5 @@ export function stageTitle(stage: Stage, library: Library): string {
 
 /** The characters shown on a stage's card: its kana or kanji, or its first words. */
 export function stagePreview(stage: Stage): string {
-  return stage.section === "words" ? stage.items.slice(0, 3).join("・") : stage.items.join("");
+  return stage.intro.kind === "words" ? stage.items.slice(0, 3).join("・") : stage.items.join("");
 }

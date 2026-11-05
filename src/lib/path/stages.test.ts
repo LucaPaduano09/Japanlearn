@@ -1,8 +1,10 @@
 import kana from "../../../public/data/kana.json";
 import kanji from "../../../public/data/kanji-n5.json";
 import vocab from "../../../public/data/vocab-n5.json";
+import kanjiN4 from "../../../public/data/kanji-n4.json";
+import vocabN4 from "../../../public/data/vocab-n4.json";
 import { describe, expect, it } from "vitest";
-import { buildDecks, itemKey, type Content } from "@/lib/srs/decks";
+import { buildDecks, DECK_IDS, itemKey, type Content } from "@/lib/srs/decks";
 import {
   buildPath,
   KANJI_PER_STAGE,
@@ -14,13 +16,14 @@ import {
   voicedBase,
 } from "./stages";
 
-const decks = buildDecks({ kana, kanji, vocab } as Content);
-const path = buildPath(decks["vocab-n5"]);
+const decks = buildDecks({ kana, kanji, vocab, kanjiN4, vocabN4 } as Content);
+const path = buildPath(decks);
+const KANJI = /[\u3005\u4e00-\u9fff]/u;
 
 describe("buildPath", () => {
-  it("goes hiragana → katakana → kanji → words", () => {
+  it("goes hiragana → katakana → N5 → N4 → remaining words", () => {
     const order = [...new Set(path.map((s) => s.section))];
-    expect(order).toEqual(["hiragana", "katakana", "kanji", "words"]);
+    expect(order).toEqual(["hiragana", "katakana", "n5", "n4", "words"]);
     expect(path[0]).toMatchObject({ id: "hira-1", items: [..."あいうえお"] });
     expect(path[1].items).toEqual([..."かきくけこ"]);
   });
@@ -30,18 +33,40 @@ describe("buildPath", () => {
   });
 
   it("covers every deck item exactly once", () => {
-    for (const deckId of ["hiragana", "katakana", "kanji-n5", "vocab-n5"] as const) {
+    for (const deckId of DECK_IDS) {
       const inPath = path.filter((s) => s.deckId === deckId).flatMap((s) => s.items);
       expect(new Set(inPath).size, deckId).toBe(inPath.length);
       expect([...inPath].sort(), deckId).toEqual(decks[deckId].map((i) => i.id).sort());
     }
   });
 
-  it("keeps kanji stages small", () => {
-    for (const s of path.filter((s) => s.section === "kanji")) {
-      expect(s.items.length).toBeLessThanOrEqual(KANJI_PER_STAGE);
+  it("teaches all N5 and N4 kanji in small stages", () => {
+    const kanjiStages = path.filter((s) => s.deckId === "kanji-n5" || s.deckId === "kanji-n4");
+    for (const s of kanjiStages) expect(s.items.length).toBeLessThanOrEqual(KANJI_PER_STAGE);
+    expect(kanjiStages.flatMap((s) => s.items)).toHaveLength(kanji.length + kanjiN4.length);
+    expect(kanjiStages[0].intro).toMatchObject({ first: true });
+    expect(kanjiStages.find((s) => s.deckId === "kanji-n4")!.intro).toMatchObject({ levelStart: "n4" });
+  });
+
+  it("follows each kanji lesson with words that are readable by then", () => {
+    const known = new Set<string>();
+    for (const stage of path) {
+      if (stage.deckId === "kanji-n5" || stage.deckId === "kanji-n4") {
+        stage.items.forEach((c) => known.add(c));
+      } else if (stage.section === "n5" || stage.section === "n4") {
+        for (const word of stage.items) {
+          for (const c of word) {
+            if (KANJI.test(c)) expect(known.has(c), `${stage.id}: ${word}`).toBe(true);
+          }
+        }
+      }
     }
-    expect(path.find((s) => s.section === "kanji")!.intro).toMatchObject({ first: true });
+  });
+
+  it("reaches N4 kanji without a long wall of word stages", () => {
+    const firstN4 = path.findIndex((s) => s.deckId === "kanji-n4");
+    const n5Words = path.slice(0, firstN4).filter((s) => s.deckId === "vocab-n5").length;
+    expect(n5Words).toBeLessThan(40);
   });
 
   it("only rewards kana stages with words made of kana learned so far", () => {
@@ -64,7 +89,7 @@ describe("buildPath", () => {
 
   it("rewards kanji stages with words that use only kanji known by then", () => {
     const known = new Set<string>();
-    for (const stage of path.filter((s) => s.section === "kanji")) {
+    for (const stage of path.filter((s) => s.deckId === "kanji-n5" || s.deckId === "kanji-n4")) {
       stage.items.forEach((c) => known.add(c));
       for (const r of stage.rewards) {
         for (const c of r.word) {

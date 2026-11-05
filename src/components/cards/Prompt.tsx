@@ -46,10 +46,12 @@ export function writePrompt(
         cue: item.romaji!,
       };
     case "kanji-n5":
+    case "kanji-n4":
       return type === "write-from-meaning"
         ? { label: p.writeKanjiMeaning, cue: item.meaning! }
         : { label: p.writeKanjiReading, cue: item.reading, japanese: true };
     case "vocab-n5":
+    case "vocab-n4":
       if (type === "write-from-reading" && hasKanji(item)) {
         return { label: p.writeWordReading, cue: item.reading, japanese: true };
       }

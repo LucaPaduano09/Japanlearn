@@ -5,7 +5,7 @@ export interface KanaEntry {
   kind: "hiragana" | "katakana";
 }
 
-/** One JLPT N5 kanji, from public/data/kanji-n5.json. */
+/** One JLPT N5 or N4 kanji, from public/data/kanji-n5.json / kanji-n4.json. */
 export interface KanjiEntry {
   char: string;
   strokeCount: number;
@@ -15,7 +15,7 @@ export interface KanjiEntry {
   meanings: string[];
 }
 
-/** One JLPT N5 vocabulary entry, from public/data/vocab-n5.json. */
+/** One JLPT N5 or N4 word, from public/data/vocab-n5.json / vocab-n4.json. */
 export interface VocabEntry {
   expression: string;
   reading: string;

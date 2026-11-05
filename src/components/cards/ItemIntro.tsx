@@ -10,7 +10,7 @@ import { WatchStep } from "@/components/writing/WatchStep";
 import { WordWriter } from "@/components/writing/WordWriter";
 import type { KanjiEntry, VocabEntry } from "@/lib/content/types";
 import { speak } from "@/lib/native/tts";
-import type { StudyItem } from "@/lib/srs/decks";
+import { isKanjiDeck, isVocabDeck, type StudyItem } from "@/lib/srs/decks";
 import {
   gradeCharacter,
   type CharacterGrade,
@@ -51,7 +51,7 @@ export function ItemIntro({
   const [grade, setGrade] = useState<CharacterGrade | null>(null);
   const strokes = useStrokes(item.chars);
   const recallType =
-    item.deckId === "kanji-n5" || item.deckId === "vocab-n5"
+    isKanjiDeck(item.deckId) || isVocabDeck(item.deckId)
       ? "write-from-meaning"
       : "write-from-reading";
 

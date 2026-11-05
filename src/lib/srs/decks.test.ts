@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import kana from "../../../public/data/kana.json";
 import kanji from "../../../public/data/kanji-n5.json";
 import vocab from "../../../public/data/vocab-n5.json";
+import kanjiN4 from "../../../public/data/kanji-n4.json";
+import vocabN4 from "../../../public/data/vocab-n4.json";
 import { describe, expect, it } from "vitest";
 import type { Content } from "./decks";
 import {
@@ -13,7 +15,7 @@ import {
 } from "./decks";
 import { charToCodepointHex } from "@/lib/strokes/codepoint";
 
-const content = { kana, kanji, vocab } as Content;
+const content = { kana, kanji, vocab, kanjiN4, vocabN4 } as Content;
 const decks = buildDecks(content);
 
 describe("buildDecks", () => {

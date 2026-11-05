@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { StrokeGuide } from "@/components/writing/StrokeGuide";
-import { loadKana, loadKanjiN5, loadStrokes } from "@/lib/content/loader";
+import { loadKana, loadAllKanji, loadStrokes } from "@/lib/content/loader";
 import type { KanaEntry, KanjiEntry } from "@/lib/content/types";
 import type { RefStroke } from "@/lib/strokes/types";
 import { strings } from "@/lib/strings";
@@ -23,7 +23,7 @@ export function KanjiDetail() {
   useEffect(() => {
     if (!char) return;
     let cancelled = false;
-    Promise.all([loadKanjiN5(), loadKana(), loadStrokes(char)]).then(
+    Promise.all([loadAllKanji(), loadKana(), loadStrokes(char)]).then(
       ([kanjiList, kanaList, strokeData]) => {
         if (cancelled) return;
         setData({

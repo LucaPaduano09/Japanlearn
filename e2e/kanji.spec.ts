@@ -23,3 +23,9 @@ test("kanji detail page animates 日 and shows its readings and meanings", async
     .evaluate((el) => getComputedStyle(el).strokeDashoffset);
   expect(offset).toBe("0px");
 });
+
+test("N4 kanji have detail pages too", async ({ page }) => {
+  await page.goto("/kanji/?c=%E6%B5%B7"); // 海
+  await expect(page.getByRole("heading", { name: "海" })).toBeVisible();
+  await expect(page.getByText("sea, ocean")).toBeVisible();
+});

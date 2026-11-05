@@ -1,11 +1,13 @@
 /**
  * Downloads and parses the content datasets into public/data:
  *  - kana.json: hiragana + katakana (46 + dakuten/handakuten), hardcoded.
- *  - kanji-n5.json: readings/meanings for JLPT N5 kanji, from KANJIDIC2's
- *    legacy jlpt="4" tag (pre-2010 4-kyuu). That old level has the same 103
- *    kanji as today's N5, and it's the only JLPT tag KANJIDIC2 ships.
- *  - vocab-n5.json: ~700 N5 words from elzup/jlpt-word-list (MIT), since
- *    JMdict dropped JLPT tags after the 2010 level revision.
+ *  - kanji-n5.json / kanji-n4.json: readings/meanings for JLPT N5 and N4
+ *    kanji, from KANJIDIC2's legacy jlpt tags (pre-2010 levels, the only
+ *    JLPT tags it ships): 4-kyuu = today's N5 (103 kanji), 3-kyuu = today's
+ *    N4 (181 more).
+ *  - vocab-n5.json / vocab-n4.json: ~700 N5 and ~670 N4 words from
+ *    elzup/jlpt-word-list (MIT), since JMdict dropped JLPT tags after the
+ *    2010 level revision.
  *  - strokes/<codepoint-hex>.json: KanjiVG stroke paths for every kana, N5
  *    kanji and character used in an N5 word, resampled to evenly spaced points.
  *
@@ -27,7 +29,10 @@ const CACHE_DIR = path.join(ROOT, ".cache", "build-data");
 
 const KANJIVG_BASE = "https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji";
 const KANJIDIC2_URL = "http://ftp.edrdg.org/pub/Nihongo/kanjidic2.xml.gz";
-const JLPT_N5_VOCAB_URL = "https://raw.githubusercontent.com/elzup/jlpt-word-list/master/src/n5.csv";
+const JLPT_VOCAB_URL = (level: "n5" | "n4") =>
+  `https://raw.githubusercontent.com/elzup/jlpt-word-list/master/src/${level}.csv`;
+/** KANJIDIC2's legacy <jlpt> value for each new level. */
+const LEGACY_JLPT = { n5: "4", n4: "3" } as const;
 
 const STROKE_SAMPLES = 24; // points per stroke, evenly spaced by arc length
 const FETCH_CONCURRENCY = 8;
@@ -141,11 +146,11 @@ async function mapWithConcurrency<T>(
 
 // --- KANJIDIC2 (XML is regular enough for this to be simpler than a parser) ---
 
-function parseKanjidic2(xml: string): KanjiRecord[] {
+function parseKanjidic2(xml: string, legacyLevel: string): KanjiRecord[] {
   const records: KanjiRecord[] = [];
   for (const block of xml.split("<character>").slice(1)) {
     const body = block.split("</character>")[0];
-    if (body.match(/<jlpt>(\d)<\/jlpt>/)?.[1] !== "4") continue; // legacy 4-kyuu ≈ N5
+    if (body.match(/<jlpt>(\d)<\/jlpt>/)?.[1] !== legacyLevel) continue;
     const literal = body.match(/<literal>([^<]+)<\/literal>/)?.[1];
     if (!literal) continue;
     const gradeMatch = body.match(/<grade>(\d+)<\/grade>/)?.[1];
@@ -243,17 +248,23 @@ async function main() {
   await writeJson("kana.json", kana);
   console.log(`  ${kana.length} characters`);
 
-  console.log("Kanji N5 (KANJIDIC2)...");
   const kanjidic2Xml = await fetchCachedGunzipText(KANJIDIC2_URL, "kanjidic2.xml");
-  const kanji = parseKanjidic2(kanjidic2Xml);
-  await writeJson("kanji-n5.json", kanji);
-  console.log(`  ${kanji.length} kanji`);
+  const kanji: KanjiRecord[] = [];
+  const vocab: VocabRecord[] = [];
+  for (const level of ["n5", "n4"] as const) {
+    console.log(`Kanji ${level.toUpperCase()} (KANJIDIC2)...`);
+    const levelKanji = parseKanjidic2(kanjidic2Xml, LEGACY_JLPT[level]);
+    await writeJson(`kanji-${level}.json`, levelKanji);
+    console.log(`  ${levelKanji.length} kanji`);
 
-  console.log("Vocab N5 (elzup/jlpt-word-list)...");
-  const vocabCsv = await fetchCachedText(JLPT_N5_VOCAB_URL, "n5-vocab.csv");
-  const vocab = parseJlptVocabCsv(vocabCsv);
-  await writeJson("vocab-n5.json", vocab);
-  console.log(`  ${vocab.length} words`);
+    console.log(`Vocab ${level.toUpperCase()} (elzup/jlpt-word-list)...`);
+    const vocabCsv = await fetchCachedText(JLPT_VOCAB_URL(level), `${level}-vocab.csv`);
+    const levelVocab = parseJlptVocabCsv(vocabCsv);
+    await writeJson(`vocab-${level}.json`, levelVocab);
+    console.log(`  ${levelVocab.length} words`);
+    kanji.push(...levelKanji);
+    vocab.push(...levelVocab);
+  }
 
   const chars = [
     ...new Set([

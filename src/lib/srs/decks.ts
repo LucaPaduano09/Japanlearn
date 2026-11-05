@@ -1,11 +1,28 @@
-import { LESSONS } from "@/lib/content/lessons";
+import { LESSONS, LESSONS_N4, type Lesson } from "@/lib/content/lessons";
 import { teachableMeanings } from "@/lib/content/readings";
 import type { KanaEntry, KanjiEntry, VocabEntry } from "@/lib/content/types";
 import { displayExpression, parseReading } from "@/lib/content/wordReadings";
 
-/** The v1 decks (BOOTSTRAP §7), in the order they are offered. */
-export const DECK_IDS = ["hiragana", "katakana", "kanji-n5", "vocab-n5"] as const;
+/** The decks, in teaching order: kana, then each JLPT level's kanji and words. */
+export const DECK_IDS = [
+  "hiragana",
+  "katakana",
+  "kanji-n5",
+  "vocab-n5",
+  "kanji-n4",
+  "vocab-n4",
+] as const;
 export type DeckId = (typeof DECK_IDS)[number];
+export type KanjiDeckId = "kanji-n5" | "kanji-n4";
+export type VocabDeckId = "vocab-n5" | "vocab-n4";
+
+export function isKanjiDeck(deckId: DeckId): deckId is KanjiDeckId {
+  return deckId === "kanji-n5" || deckId === "kanji-n4";
+}
+
+export function isVocabDeck(deckId: DeckId): deckId is VocabDeckId {
+  return deckId === "vocab-n5" || deckId === "vocab-n4";
+}
 
 export type CardType =
   | "write-from-meaning"
@@ -26,14 +43,17 @@ export interface StudyItem {
   romaji?: string;
   /** Kanji and words: short English meaning. */
   meaning?: string;
-  /** Kanji the word uses that aren't in the N5 kanji list. */
+  /** Kanji the word uses that the app doesn't teach (beyond N4). */
   extraKanji?: number;
 }
 
 export interface Content {
   kana: KanaEntry[];
+  /** N5 kanji and words. */
   kanji: KanjiEntry[];
   vocab: VocabEntry[];
+  kanjiN4: KanjiEntry[];
+  vocabN4: VocabEntry[];
 }
 
 /** Kana, ー, 々 and CJK ideographs: everything that ships stroke data. */
@@ -42,11 +62,16 @@ const KANJI = /[々一-鿿]/u;
 
 /** Builds every deck's items in teaching order. */
 export function buildDecks(content: Content): Record<DeckId, StudyItem[]> {
+  const taught = new Set([...content.kanji, ...content.kanjiN4].map((k) => k.char));
+  const vocabN5 = vocabItems(content.vocab, taught, "vocab-n5", new Set());
   return {
     hiragana: kanaItems(content.kana, "hiragana"),
     katakana: kanaItems(content.kana, "katakana"),
-    "kanji-n5": kanjiItems(content.kanji),
-    "vocab-n5": vocabItems(content.vocab, content.kanji),
+    "kanji-n5": kanjiItems(content.kanji, LESSONS, "kanji-n5"),
+    "vocab-n5": vocabN5,
+    "kanji-n4": kanjiItems(content.kanjiN4, LESSONS_N4, "kanji-n4"),
+    // A word on both lists stays in N5 only.
+    "vocab-n4": vocabItems(content.vocabN4, taught, "vocab-n4", new Set(vocabN5.map((w) => w.id))),
   };
 }
 
@@ -81,13 +106,14 @@ export function hasAmbiguousSound(item: StudyItem) {
   return item.romaji?.includes("(") ?? false;
 }
 
-function kanjiItems(kanji: KanjiEntry[]): StudyItem[] {
+function kanjiItems(kanji: KanjiEntry[], lessons: Lesson[], deckId: KanjiDeckId): StudyItem[] {
   const byChar = new Map(kanji.map((k) => [k.char, k]));
-  return LESSONS.flatMap((l) => l.kanji)
+  return lessons
+    .flatMap((l) => l.kanji)
     .map((c) => byChar.get(c))
     .filter((k) => k !== undefined)
     .map((k) => ({
-      deckId: "kanji-n5" as const,
+      deckId,
       id: k.char,
       chars: [k.char],
       reading: kanjiReading(k),
@@ -106,9 +132,13 @@ export function kanjiReading(k: KanjiEntry): string {
     .join(" / ");
 }
 
-function vocabItems(vocab: VocabEntry[], kanji: KanjiEntry[]): StudyItem[] {
-  const n5 = new Set(kanji.map((k) => k.char));
-  const seen = new Set<string>();
+function vocabItems(
+  vocab: VocabEntry[],
+  taught: Set<string>,
+  deckId: VocabDeckId,
+  skip: Set<string>,
+): StudyItem[] {
+  const seen = new Set(skip);
   const items: StudyItem[] = [];
   for (const word of vocab) {
     // "～円" is a counter: the learner writes 円. "足; 脚": the first form.
@@ -119,15 +149,15 @@ function vocabItems(vocab: VocabEntry[], kanji: KanjiEntry[]): StudyItem[] {
     seen.add(written);
     const chars = [...written];
     items.push({
-      deckId: "vocab-n5",
+      deckId,
       id: written,
       chars,
       reading,
       meaning: word.meaning,
-      extraKanji: chars.filter((c) => KANJI.test(c) && !n5.has(c)).length,
+      extraKanji: chars.filter((c) => KANJI.test(c) && !taught.has(c)).length,
     });
   }
-  // Words built from known N5 kanji (or kana only) come first, shorter first.
+  // Words made of taught kanji (or kana only) come first, shorter first.
   return items
     .map((item, i) => ({ item, i }))
     .sort(
@@ -153,8 +183,10 @@ export function cardTypesFor(item: StudyItem): CardType[] {
         ? ["write-from-reading", "recognize"]
         : ["write-from-reading", "write-from-audio", "recognize"];
     case "kanji-n5":
+    case "kanji-n4":
       return ["write-from-meaning", "write-from-reading", "recognize"];
     case "vocab-n5":
+    case "vocab-n4":
       // A word with kanji can't be written from sound alone (homophones),
       // so it is prompted with its kana instead.
       return [

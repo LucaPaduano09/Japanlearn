@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { KIND_STYLE, WordRow } from "@/components/learn/KanjiMeet";
-import { loadKanjiN5 } from "@/lib/content/loader";
+import { loadAllKanji } from "@/lib/content/loader";
 import type { KanjiEntry } from "@/lib/content/types";
 import { matchWord, type ReadingKind } from "@/lib/content/wordReadings";
 import { strings } from "@/lib/strings";
@@ -71,7 +71,7 @@ export function ReadingsIntro() {
 
   useEffect(() => {
     useProgress.getState().load();
-    loadKanjiN5().then((list) =>
+    loadAllKanji().then((list) =>
       setKanji(new Map(list.map((k) => [k.char, k]))),
     );
   }, []);

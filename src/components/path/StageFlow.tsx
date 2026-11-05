@@ -17,7 +17,7 @@ import {
   type Stage,
   type StageStatus,
 } from "@/lib/path/stages";
-import { cardTypesFor, itemKey } from "@/lib/srs/decks";
+import { cardTypesFor, isKanjiDeck, itemKey } from "@/lib/srs/decks";
 import { getLocale, strings } from "@/lib/strings";
 import { useSettings } from "@/store/settings";
 import { StageIntro } from "./StageIntro";
@@ -175,7 +175,7 @@ function StageItem({
   return (
     <ItemIntro
       item={item}
-      kanji={item.deckId === "kanji-n5" ? library.kanji.get(item.id) : undefined}
+      kanji={isKanjiDeck(item.deckId) ? library.kanji.get(item.id) : undefined}
       vocab={library.vocab}
       strictness={strictness}
       autoplayAudio={autoplayAudio}
@@ -203,7 +203,7 @@ function StageReward({
   const router = useRouter();
   const t = strings.stage;
   const locale = getLocale();
-  const isWords = stage.section === "words";
+  const isWords = stage.intro.kind === "words";
 
   return (
     <div className="flex flex-1 flex-col gap-6">

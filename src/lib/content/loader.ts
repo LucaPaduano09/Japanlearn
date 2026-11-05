@@ -37,14 +37,30 @@ export function loadVocabN5(): Promise<VocabEntry[]> {
   return loadJson("/data/vocab-n5.json");
 }
 
-/** All three content files at once (decks are built from them together). */
+export function loadKanjiN4(): Promise<KanjiEntry[]> {
+  return loadJson("/data/kanji-n4.json");
+}
+
+export function loadVocabN4(): Promise<VocabEntry[]> {
+  return loadJson("/data/vocab-n4.json");
+}
+
+/** Every kanji the app teaches (N5 then N4). */
+export async function loadAllKanji(): Promise<KanjiEntry[]> {
+  const [n5, n4] = await Promise.all([loadKanjiN5(), loadKanjiN4()]);
+  return [...n5, ...n4];
+}
+
+/** All content files at once (decks are built from them together). */
 export async function loadContent() {
-  const [kana, kanji, vocab] = await Promise.all([
+  const [kana, kanji, vocab, kanjiN4, vocabN4] = await Promise.all([
     loadKana(),
     loadKanjiN5(),
     loadVocabN5(),
+    loadKanjiN4(),
+    loadVocabN4(),
   ]);
-  return { kana, kanji, vocab };
+  return { kana, kanji, vocab, kanjiN4, vocabN4 };
 }
 
 /** Reference strokes for a single character, or null if none are shipped. */

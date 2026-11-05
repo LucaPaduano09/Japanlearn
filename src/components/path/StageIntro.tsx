@@ -109,6 +109,12 @@ export function StageIntro({
     case "kanji":
       body = (
         <>
+          {intro.levelStart && (
+            <Panel
+              title={t.levelTitle(intro.levelStart)}
+              text={t.levelBody(library.decks[`kanji-${intro.levelStart}`].length)}
+            />
+          )}
           {intro.first && (
             <Panel title={t.kanjiTitle} text={t.kanjiBody}>
               <Link
